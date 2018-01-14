@@ -1,4 +1,4 @@
-#Trader configuration
+#Trading configuration
 
 1. Copy sample configuration file and set the secret/key pairs
 
@@ -14,4 +14,4 @@
 
 4. Start pm2 (or node during development)
 
-`pm2 start app.js --name trader`
+`pm2 start app.js --name trading`
