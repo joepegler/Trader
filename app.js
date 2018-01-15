@@ -19,7 +19,11 @@ module.exports = (function() {
 
     app
         .all('*', function (req, res, next) {
-            if (req.headers.auth_key.toString() === AUTH_TOKEN){
+
+            // Verify authKey
+            let authKey = req.headers.auth_key.toString().toUpperCase();
+
+            if (authKey === AUTH_TOKEN){
                 next();
             }
             else {
