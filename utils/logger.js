@@ -19,7 +19,7 @@ module.exports = (function() {
                 msg += messageOne;
             }
             console.log(msg);
-            bot.sendMessage(id, msg);
+            // bot.sendMessage(id, msg);
             fs.appendFileSync('./logfile.txt', msg);
             if (messageTwo) logger.log(messageTwo);
         },
