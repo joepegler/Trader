@@ -58,8 +58,6 @@ module.exports = (function () {
 
                     let balance = {};
 
-                    logger.log(data);
-
                     _.each(exchangePairNames, function (exchangeCoinName, coinName) {
 
                         let usdPair = coinName.slice(0, -3) + 'USD';
