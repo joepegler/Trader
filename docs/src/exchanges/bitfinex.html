@@ -148,7 +148,7 @@
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _init = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pairs</span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _init = <span class="hljs-function">(<span class="hljs-params">pairs</span>) =&gt;</span> {
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             exchangePairNames = _.pickBy(exchangePairNames, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">coinVal, coinName</span>) </span>{ <span class="hljs-comment">// exchangePairNames needs to be filtered by the 'pairs' argument</span>
                 <span class="hljs-keyword">return</span> _.includes(pairs, coinName)
@@ -208,7 +208,7 @@ which pairs were initialised during setup</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _pairIsEnabled = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pair</span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _pairIsEnabled = <span class="hljs-function">(<span class="hljs-params">pair</span>) =&gt;</span> {
         <span class="hljs-keyword">return</span> !!_.invert(exchangePairNames)[pair];
     };</pre></div></div>
             
@@ -234,7 +234,7 @@ with (tradeable) and without (balance) leverage.</p>
 </code></pre>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getBalances = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getBalances = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             bitfinexRest.margin_infos(<span class="hljs-function">(<span class="hljs-params">err, data</span>) =&gt;</span> { <span class="hljs-comment">// Gets bitfinex account margin data</span>
                 <span class="hljs-keyword">if</span> (!err) {
@@ -277,7 +277,7 @@ with (tradeable) and without (balance) leverage.</p>
 </code></pre>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getActiveOrders = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getActiveOrders = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             bitfinexRest.active_orders(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, activeOrderResponse</span>) </span>{
                 <span class="hljs-keyword">if</span> (!err) {</pre></div></div>
@@ -360,7 +360,7 @@ with (tradeable) and without (balance) leverage.</p>
 </code></pre>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getActivePositions = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getActivePositions = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             bitfinexRest.active_positions(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, activePositionResponse</span>) </span>{
                 <span class="hljs-keyword">if</span> (!err) {</pre></div></div>
@@ -478,7 +478,7 @@ with (tradeable) and without (balance) leverage.</p>
 </code></pre>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getState = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getState = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             _getBalances().then(<span class="hljs-function"><span class="hljs-params">balances</span> =&gt;</span> {
                 <span class="hljs-keyword">let</span> state = {
@@ -590,7 +590,7 @@ has changed. Retries every 3 seconds for up to 15 seconds.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _stateHasChanged = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pair, stateTest</span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _stateHasChanged = <span class="hljs-function">(<span class="hljs-params">pair, stateTest</span>) =&gt;</span> {
         <span class="hljs-keyword">let</span> retry_interval = <span class="hljs-number">1000</span> * <span class="hljs-number">3</span>; <span class="hljs-comment">// 3 seconds</span>
         <span class="hljs-keyword">let</span> hardStop = <span class="hljs-number">5</span> * retry_interval; <span class="hljs-comment">// 15 seconds</span>
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
@@ -632,12 +632,49 @@ has changed. Retries every 3 seconds for up to 15 seconds.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
+              <p><code>_exit</code> Exits all active orders and trades</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _exitAll = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            <span class="hljs-keyword">let</span> cancellations = [];
+            _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
+                <span class="hljs-keyword">let</span> activePairs = [];
+                state.activePairs.forEach(<span class="hljs-function"><span class="hljs-params">activePair</span> =&gt;</span> {
+                    activePair.positions.forEach(<span class="hljs-function"><span class="hljs-params">position</span> =&gt;</span> {
+                        activePairs.push(position.pair);
+                    });
+                    activePair.orders.forEach(<span class="hljs-function"><span class="hljs-params">order</span> =&gt;</span> {
+                        activePairs.push(order.pair);
+                    });
+                });
+                cancellations = _.uniq(activePairs).map(<span class="hljs-function"><span class="hljs-params">pair</span> =&gt;</span> { <span class="hljs-keyword">return</span> _exit(pair) });
+                <span class="hljs-keyword">if</span> ( !cancellations.length ){
+                    resolve(<span class="hljs-string">'Bot is already idle'</span>);
+                }
+                <span class="hljs-keyword">else</span> {
+                    <span class="hljs-built_in">Promise</span>.all(cancellations).then(resolve).catch(reject);
+                }
+            }).catch(reject);
+        });
+    };</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
               <p><code>_exit</code> Exits all active orders and trades for a given pair.
 Attempts to exit 5 times, each attempt with an updated price.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _exit = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pair</span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _exit = <span class="hljs-function">(<span class="hljs-params">pair</span>) =&gt;</span> {
         <span class="hljs-keyword">let</span> retryCount = <span class="hljs-number">5</span>;
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             <span class="hljs-keyword">let</span> __exit = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
@@ -676,17 +713,17 @@ Attempts to exit 5 times, each attempt with an updated price.</p>
         </li>
         
         
-        <li id="section-21">
+        <li id="section-22">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
+                <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
               <p><code>_cancelOrder</code> Cancels an order with the given order_id;</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _cancelOrder = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">orderId</span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _cancelOrder = <span class="hljs-function">(<span class="hljs-params">orderId</span>) =&gt;</span> {
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             bitfinexRest.cancel_order(orderId.toString(), (err, res) =&gt; {
                 <span class="hljs-keyword">if</span> (!err) {
@@ -703,11 +740,11 @@ Attempts to exit 5 times, each attempt with an updated price.</p>
         </li>
         
         
-        <li id="section-22">
+        <li id="section-23">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-22">&#182;</a>
+                <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
               <p><code>_parseTradeArguments</code> Preps an object to place an order</p>
 <pre><code> {
@@ -722,7 +759,7 @@ Attempts to exit 5 times, each attempt with an updated price.</p>
 </code></pre>
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _parseTradeArguments = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">balances, pair, side, amount</span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _parseTradeArguments = <span class="hljs-function">(<span class="hljs-params">balances, pair, side, amount</span>) =&gt;</span> {
         <span class="hljs-keyword">let</span> res = {
             <span class="hljs-attr">data</span>: {},
             <span class="hljs-attr">error</span>: <span class="hljs-literal">null</span>
@@ -760,18 +797,18 @@ Attempts to exit 5 times, each attempt with an updated price.</p>
         </li>
         
         
-        <li id="section-23">
+        <li id="section-24">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-23">&#182;</a>
+                <a class="pilcrow" href="#section-24">&#182;</a>
               </div>
               <p><code>_trade</code> Decides the type of order to be placed, and then places it.
 Returns the next state.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _trade = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pair, side</span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _trade = <span class="hljs-function">(<span class="hljs-params">pair, side</span>) =&gt;</span> {
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
                 <span class="hljs-keyword">let</span> activePair = _.find(state.activePairs, {<span class="hljs-attr">pair</span>: pair});
@@ -807,17 +844,17 @@ Returns the next state.</p>
         </li>
         
         
-        <li id="section-24">
+        <li id="section-25">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-24">&#182;</a>
+                <a class="pilcrow" href="#section-25">&#182;</a>
               </div>
               <p><code>_order</code> Places an order to bitfinex.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _order = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pair, side, amount</span>) </span>{
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _order = <span class="hljs-function">(<span class="hljs-params">pair, side, amount</span>) =&gt;</span> {
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             _getBalances().then(<span class="hljs-function"><span class="hljs-params">balances</span> =&gt;</span> {
                 <span class="hljs-keyword">let</span> tradeData = _parseTradeArguments(balances, pair, side, amount);
@@ -842,11 +879,11 @@ Returns the next state.</p>
         </li>
         
         
-        <li id="section-25">
+        <li id="section-26">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-25">&#182;</a>
+                <a class="pilcrow" href="#section-26">&#182;</a>
               </div>
               <p>Exposed public functions</p>
 
@@ -855,6 +892,7 @@ Returns the next state.</p>
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> {
         <span class="hljs-attr">init</span>: _init,
         <span class="hljs-attr">exit</span>: _exit,
+        <span class="hljs-attr">exitAll</span>: _exitAll,
         <span class="hljs-attr">trade</span>: _trade,
         <span class="hljs-attr">order</span>: _order,
         <span class="hljs-attr">getState</span>: _getState,

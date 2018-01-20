@@ -2,12 +2,8 @@ module.exports = (function() {
     "use strict";
 
     const moment = require('moment');
-    const TelegramBot = require('node-telegram-bot-api');
+    const telegram = require('./telegram');
     const fs = require('fs');
-
-    const key = '380504145:AAF16WbEqFSaKtP6ZidJE6mxUD9QmU3tePc';
-    const id = '-237675778';
-    const bot = new TelegramBot(key);
 
     const logger = {
         log: (messageOne, messageTwo) => {
@@ -19,7 +15,9 @@ module.exports = (function() {
                 msg += messageOne;
             }
             fs.appendFileSync('./logfile.txt', msg);
-            console.log(msg.replace('\n', ''));
+            msg = msg.replace('\n', '');
+            telegram.sendMessage(msg);
+            console.log(msg);
             if (messageTwo) logger.log(messageTwo);
         },
         error: (errorOne, errorTwo) => {
@@ -35,9 +33,10 @@ module.exports = (function() {
             else {
                 msg += errorOne;
             }
-            console.error(msg);
-            bot.sendMessage(id, msg);
             fs.appendFileSync('./logfile.txt', msg);
+            msg = msg.replace('\n', '');
+            telegram.sendMessage(msg);
+            console.error(msg);
             if (errorTwo) logger.err(errorTwo);
         },
     };

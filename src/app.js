@@ -76,7 +76,6 @@ module.exports = (function() {
         .get('/state', function(req, res) {
 
             // Gets the current state of the bot.
-
             exchange
                 .getState()
                 .then(status => {

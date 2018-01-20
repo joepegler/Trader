@@ -4,23 +4,23 @@ module.exports = (function() {
 
     const prompt = require('prompt');
     const exchange = require('./exchanges/bitfinex');
-    const logger = require('./utils/logger');
+    const telegram = require('./utils/telegram');
 
     prompt.start();
 
     let pairs = ['ETHBTC'];
 
-    exchange.init(pairs).catch(logger.error);
+    exchange.init(pairs).catch(console.error);
 
     (function getIntput(result){
 
         let exit = (e) => {
-            logger.error(e);
+            console.error(e);
             process.exit();
         };
 
-        if(result) logger.log(result);
-        logger.log(`Pick an action: [b]alances, [buy], [sell], [e]xit, [s]tate, [o]rders, [p]ositions`);
+        if(result) console.log(result);
+        console.log(`Pick an action: [b]alances, [buy], [sell], [e]xit, e[x]it all, [s]tate, [o]rders, [p]ositions, [t]elegram`);
 
         // Get user input
         prompt.get(['action'], function (err, res) {
@@ -38,6 +38,9 @@ module.exports = (function() {
                     case 'e':
                         exchange.exit('ETHBTC').then(getIntput).catch(exit);
                         break;
+                    case 'x':
+                        exchange.exitAll().then(getIntput).catch(exit);
+                        break;
                     case 's':
                         exchange.getState().then(getIntput).catch(exit);
                         break;
@@ -46,6 +49,9 @@ module.exports = (function() {
                         break;
                     case 'p':
                         exchange.getActivePositions().then(getIntput).catch(exit);
+                        break;
+                    case 't':
+                        telegram.init(exchange).then(getIntput).catch(exit);
                         break;
                     default:
                         getIntput('Wrong selection');

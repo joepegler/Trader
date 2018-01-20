@@ -33,7 +33,7 @@ module.exports = (function () {
     // Functions
     // ----------------
     // `_init` Initiates the price ticker and retrieves the current account balance
-    let _init = function (pairs) {
+    let _init = (pairs) => {
         return new Promise((resolve, reject) => {
             exchangePairNames = _.pickBy(exchangePairNames, function (coinVal, coinName) { // exchangePairNames needs to be filtered by the 'pairs' argument
                 return _.includes(pairs, coinName)
@@ -81,7 +81,7 @@ module.exports = (function () {
 
     // `_pairIsEnabled` is used to determine
     // which pairs were initialised during setup
-    let _pairIsEnabled = function (pair) {
+    let _pairIsEnabled = (pair) => {
         return !!_.invert(exchangePairNames)[pair];
     };
 
@@ -97,7 +97,7 @@ module.exports = (function () {
     //          }
     //      ]
     //
-    let _getBalances = function () {
+    let _getBalances = () => {
         return new Promise((resolve, reject) => {
             bitfinexRest.margin_infos((err, data) => { // Gets bitfinex account margin data
                 if (!err) {
@@ -129,7 +129,7 @@ module.exports = (function () {
     //              "side":"buy"
     //          },
     //      ]
-    let _getActiveOrders = function () {
+    let _getActiveOrders = () => {
         return new Promise((resolve, reject) => {
             bitfinexRest.active_orders(function (err, activeOrderResponse) {
                 if (!err) {
@@ -188,7 +188,7 @@ module.exports = (function () {
     //              side: 'buy'
     //          }
     //     ]
-    let _getActivePositions = function () {
+    let _getActivePositions = () => {
         return new Promise((resolve, reject) => {
             bitfinexRest.active_positions(function (err, activePositionResponse) {
                 if (!err) {
@@ -269,7 +269,7 @@ module.exports = (function () {
     //             "orders": []
     //         }]
     //     }
-    let _getState = function () {
+    let _getState = () => {
         return new Promise((resolve, reject) => {
             _getBalances().then(balances => {
                 let state = {
@@ -343,7 +343,7 @@ module.exports = (function () {
 
     // `_stateHasChanged` checks to ensure that the state of the bot
     // has changed. Retries every 3 seconds for up to 15 seconds.
-    let _stateHasChanged = function (pair, stateTest) {
+    let _stateHasChanged = (pair, stateTest) => {
         let retry_interval = 1000 * 3; // 3 seconds
         let hardStop = 5 * retry_interval; // 15 seconds
         return new Promise((resolve, reject) => {
@@ -376,9 +376,34 @@ module.exports = (function () {
         });
     };
 
+    // `_exit` Exits all active orders and trades
+    let _exitAll = () => {
+        return new Promise((resolve, reject) => {
+            let cancellations = [];
+            _getState().then(state => {
+                let activePairs = [];
+                state.activePairs.forEach(activePair => {
+                    activePair.positions.forEach(position => {
+                        activePairs.push(position.pair);
+                    });
+                    activePair.orders.forEach(order => {
+                        activePairs.push(order.pair);
+                    });
+                });
+                cancellations = _.uniq(activePairs).map(pair => { return _exit(pair) });
+                if ( !cancellations.length ){
+                    resolve('Bot is already idle');
+                }
+                else {
+                    Promise.all(cancellations).then(resolve).catch(reject);
+                }
+            }).catch(reject);
+        });
+    };
+
     // `_exit` Exits all active orders and trades for a given pair.
     // Attempts to exit 5 times, each attempt with an updated price.
-    let _exit = function (pair) {
+    let _exit = (pair) => {
         let retryCount = 5;
         return new Promise((resolve, reject) => {
             let __exit = () => {
@@ -415,7 +440,7 @@ module.exports = (function () {
     };
 
     // `_cancelOrder` Cancels an order with the given order_id;
-    let _cancelOrder = function (orderId) {
+    let _cancelOrder = (orderId) => {
         return new Promise((resolve, reject) => {
             bitfinexRest.cancel_order(orderId.toString(), (err, res) => {
                 if (!err) {
@@ -440,7 +465,7 @@ module.exports = (function () {
     //          "side": "buy",
     //          "type": "limit"
     //      }
-    let _parseTradeArguments = function (balances, pair, side, amount) {
+    let _parseTradeArguments = (balances, pair, side, amount) => {
         let res = {
             data: {},
             error: null
@@ -477,7 +502,7 @@ module.exports = (function () {
 
     // `_trade` Decides the type of order to be placed, and then places it.
     // Returns the next state.
-    let _trade = function (pair, side) {
+    let _trade = (pair, side) => {
         return new Promise((resolve, reject) => {
             _getState().then(state => {
                 let activePair = _.find(state.activePairs, {pair: pair});
@@ -511,7 +536,7 @@ module.exports = (function () {
     };
 
     // `_order` Places an order to bitfinex.
-    let _order = function (pair, side, amount) {
+    let _order = (pair, side, amount) => {
         return new Promise((resolve, reject) => {
             _getBalances().then(balances => {
                 let tradeData = _parseTradeArguments(balances, pair, side, amount);
@@ -537,6 +562,7 @@ module.exports = (function () {
     return {
         init: _init,
         exit: _exit,
+        exitAll: _exitAll,
         trade: _trade,
         order: _order,
         getState: _getState,
