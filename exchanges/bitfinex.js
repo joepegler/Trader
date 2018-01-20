@@ -58,6 +58,8 @@ module.exports = (function () {
 
                     let balance = {};
 
+                    logger.log(data);
+
                     _.each(exchangePairNames, function (exchangeCoinName, coinName) {
 
                         let usdPair = coinName.slice(0, -3) + 'USD';
@@ -66,7 +68,7 @@ module.exports = (function () {
                             tradeable: parseFloat(_.find(data[0].margin_limits, {on_pair: exchangeCoinName}).tradable_balance / usdPrices[usdPair].ask)
                         }
                     });
-                    // logger.log('[getBalance] success: ' + JSON.stringify(prices, null, 2));
+                    // logger.log('getBalance success: ' + JSON.stringify(prices, null, 2));
                     resolve(balance);
                 }
                 else {
@@ -96,7 +98,7 @@ module.exports = (function () {
         *
         * */
 
-        logger.log('[getActiveOrders]');
+        logger.log('getActiveOrders');
 
         return new Promise((resolve, reject) => {
 
@@ -145,7 +147,7 @@ module.exports = (function () {
                         })
                     });
 
-                    // logger.log('[getActiveOrders] success: ' + JSON.stringify(activeOrders, null, 2));
+                    // logger.log('getActiveOrders success: ' + JSON.stringify(activeOrders, null, 2));
                     resolve(activeOrders);
                 }
                 else {
@@ -175,7 +177,7 @@ module.exports = (function () {
         *
         * */
 
-        logger.log('[getActivePositions]');
+        logger.log('getActivePositions');
 
         return new Promise((resolve, reject) => {
 
@@ -232,7 +234,7 @@ module.exports = (function () {
                                 side: positionAmount > 0 ? 'buy' : 'sell'
                             });
 
-                            // logger.log('[getActivePositions] success: ' + JSON.stringify(activePositionArr, null, 2));
+                            // logger.log('getActivePositions success: ' + JSON.stringify(activePositionArr, null, 2));
                             resolve(activePositionArr);
                         });
                     }
@@ -268,60 +270,63 @@ module.exports = (function () {
         *
         * */
 
-        logger.log('[getState]');
+        logger.log('getState');
 
         return new Promise((resolve, reject) => {
 
-            _getActivePositions().then(activePositions => {
+            _getBalance().then(balance => {
 
-                _getActiveOrders().then(activeOrders => {
+                _getActivePositions().then(activePositions => {
 
-                    let state = {};
+                    _getActiveOrders().then(activeOrders => {
 
-                    activePositions.forEach(position => {
+                        let state = {};
 
-                        //  position = {
-                        //      id: 38168717,
-                        //      pair: 'ETHBTC',
-                        //      base: 0.043646,
-                        //      amount: .25,
-                        //      profit: -0.000030805,
-                        //      side: 'buy'
-                        //  }
+                        activePositions.forEach(position => {
 
-                        if (!state[position.pair]) {
-                            state[position.pair] = {
-                                side: position.side,
-                                positions: [],
-                                orders: []
-                            };
-                        }
+                            //  position = {
+                            //      id: 38168717,
+                            //      pair: 'ETHBTC',
+                            //      base: 0.043646,
+                            //      amount: .25,
+                            //      profit: -0.000030805,
+                            //      side: 'buy'
+                            //  }
 
-                        state[position.pair].positions.push(position);
-                    });
+                            if (!state[position.pair]) {
+                                state[position.pair] = {
+                                    side: position.side,
+                                    positions: [],
+                                    orders: []
+                                };
+                            }
 
-                    activeOrders.forEach(order => {
+                            state[position.pair].positions.push(position);
+                        });
 
-                        //  order = {
-                        //      "id":5243424763,
-                        //      "pair":"ETHBTC",
-                        //      "price": 0.043615,
-                        //      "side":"buy"
-                        //  }
+                        activeOrders.forEach(order => {
 
-                        if (!state[order.pair]) {
-                            state[order.pair] = {
-                                side: order.side === 'buy' ? 'buy' : 'sell',
-                                positions: [],
-                                orders: []
-                            };
-                        }
-                        state[order.pair].orders.push(order);
-                    });
+                            //  order = {
+                            //      "id":5243424763,
+                            //      "pair":"ETHBTC",
+                            //      "price": 0.043615,
+                            //      "side":"buy"
+                            //  }
 
-                    // If empty object then the state is idle.
-                    resolve(state);
+                            if (!state[order.pair]) {
+                                state[order.pair] = {
+                                    side: order.side === 'buy' ? 'buy' : 'sell',
+                                    positions: [],
+                                    orders: []
+                                };
+                            }
+                            state[order.pair].orders.push(order);
+                        });
 
+                        // If empty object then the state is idle.
+                        resolve(state);
+
+                    }).catch(reject);
                 }).catch(reject);
             }).catch(reject);
         });
@@ -344,7 +349,7 @@ module.exports = (function () {
         let hardStop = 1000 * 60; // one minute
         let retry_interval = 1000 * 5; // 10 seconds
 
-        logger.log('[stateHasChanged]');
+        logger.log('stateHasChanged');
 
         return new Promise((resolve, reject) => {
 
@@ -406,7 +411,7 @@ module.exports = (function () {
         *
         * */
 
-        logger.log('[exit]');
+        logger.log('exit');
 
         return new Promise((resolve, reject) => {
 
@@ -457,7 +462,7 @@ module.exports = (function () {
         *
         * */
 
-        logger.log('[cancelOrder]');
+        logger.log('cancelOrder');
 
         return new Promise((resolve, reject) => {
             bitfinexRest.cancel_order(orderId.toString(), (err, res) => {
@@ -474,7 +479,7 @@ module.exports = (function () {
     let _init = function (pairs) {
 
         // Initiate the price ticker and retrieve the current account balance.
-        logger.log('[init]');
+        logger.log('init');
 
         return new Promise((resolve, reject) => {
 
@@ -522,6 +527,7 @@ module.exports = (function () {
 
                     // And update the prices object.
                     if (pair) {
+
                         prices[pair] = {
                             exchange: 'bitfinex',
                             pair: pair,
@@ -529,6 +535,8 @@ module.exports = (function () {
                             mid: parseFloat((parseFloat(ticker.ASK) + parseFloat(ticker.BID)) / 2),
                             bid: parseFloat(ticker.BID),
                         };
+
+                        // logger.log( pair + ' bid: ' + prices[pair].bid + ', ask: ' + prices[pair].ask );
                     }
                     if (!pair || pair === 'BTCUSD') {
                         usdPrices[ePair] = {
@@ -633,7 +641,7 @@ module.exports = (function () {
         *
         * */
 
-        logger.log('[trade]');
+        logger.log('trade');
 
         return new Promise((resolve, reject) => {
 
@@ -691,7 +699,7 @@ module.exports = (function () {
         *
         * */
 
-        logger.log('[order]');
+        logger.log('order');
 
         return new Promise((resolve, reject) => {
 

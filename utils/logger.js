@@ -18,9 +18,9 @@ module.exports = (function() {
             else {
                 msg += messageOne;
             }
-            console.log(msg);
             // bot.sendMessage(id, msg);
             fs.appendFileSync('./logfile.txt', msg);
+            console.log(msg.replace('\n', ''));
             if (messageTwo) logger.log(messageTwo);
         },
         error: (errorOne, errorTwo) => {
