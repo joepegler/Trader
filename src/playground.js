@@ -7,6 +7,7 @@ module.exports = (function() {
     const logger = require('./utils/logger');
 
     prompt.start();
+
     let pairs = ['ETHBTC'];
 
     exchange.init(pairs).catch(logger.error);
@@ -14,22 +15,23 @@ module.exports = (function() {
     (function getIntput(result){
 
         if(result) logger.log(result);
+        logger.log(`Pick an action: [b]alances, [buy], [sell], [e]xit, [s]tate, [o]rders, [p]ositions`);
 
-        logger.log(`Pick an action: [b]alance, [buy], [sell], [e]xit, [s]tate, [o]rders, [p]ositions`);
+        // Get user input
         prompt.get(['action'], function (err, res) {
             if(!err && res.action){
                 switch( res.action ){
                     case 'b':
-                        exchange.getBalance().then(getIntput).catch(logger.error);
+                        exchange.getBalances().then(getIntput).catch(logger.error);
                         break;
                     case 'buy':
-                        exchange.trade(pairs[0], 'buy').then(getIntput).catch(logger.error);
+                        exchange.trade('ETHBTC', 'buy').then(getIntput).catch(logger.error);
                         break;
                     case 'sell':
-                        exchange.trade(pairs[0], 'sell').then(getIntput).catch(logger.error);
+                        exchange.trade('ETHBTC', 'sell').then(getIntput).catch(logger.error);
                         break;
                     case 'e':
-                        exchange.exit(pairs[0]).then(getIntput).catch(logger.error);
+                        exchange.exit('ETHBTC').then(getIntput).catch(logger.error);
                         break;
                     case 's':
                         exchange.getState().then(getIntput).catch(logger.error);

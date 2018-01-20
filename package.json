@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "start": "node ./src/app",
+    "docs": "docco ./src/exchanges/bitfinex.js",
+    "play": "node ./src/playground"
   },
   "author": "Joe Pegler",
   "license": "ISC",
