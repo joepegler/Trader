@@ -9,6 +9,7 @@ module.exports = (function () {
 
     // Local imports
     const configKeys = require('./config');
+    const logger = require('../utils/logger');
 
     // Configure imports
     const bitfinexRest = new BFX(configKeys.rest.key, configKeys.rest.secret, {version: 1, transform: true}).rest;
@@ -318,8 +319,11 @@ module.exports = (function () {
                                 let activePair = _.find(state.pairs, {pair: order.pair});
                                 let activePairIndex = _.findIndex(state.pairs, {pair: order.pair});
                                 if (!activePair) {
-                                    state.state = 'active'; // Set the state to active
+                                    let balance = _.find(balances, {pair: order.pair});
+                                    if (balance) balance = balance.balance;
                                     activePair = {// Initialise the activePair with default state.
+                                        pair: order.pair,
+                                        balance: balance,
                                         side: order.side === 'buy' ? 'buy' : 'sell',
                                         positions: [],
                                         orders: []
@@ -338,10 +342,10 @@ module.exports = (function () {
     };
 
     // `_stateHasChanged` checks to ensure that the state of the bot
-    // has changed. Retries every 10 seconds for up to a minute.
+    // has changed. Retries every 3 seconds for up to 15 seconds.
     let _stateHasChanged = function (pair, stateTest) {
-        let hardStop = 1000 * 60; // one minute
-        let retry_interval = 1000 * 5; // 10 seconds
+        let retry_interval = 1000 * 3; // 3 seconds
+        let hardStop = 5 * retry_interval; // 15 seconds
         return new Promise((resolve, reject) => {
             let __stateHasChanged = function (pair, stateTest) {
                 _getState().then(state => {
@@ -349,11 +353,13 @@ module.exports = (function () {
                     if (
                         (state.state === 'active' && activePair.side === stateTest) || // 'There are active positions and the side of the positions matches the test state'
                         (!activePair && stateTest === 'idle')) { // There are no active positions and the test state is 'idle'.
+                        logger.log('State changed to: ' + stateTest);
                         resolve(state); // Resolve with the current state
                     }
                     else {
                         if (hardStop > 0) { // If time still less than the hard stop
                             setTimeout(() => {
+                                logger.log('Retrying state change: ' + stateTest);
                                 __stateHasChanged(pair, stateTest); // recursive call, try again
                                 hardStop -= retry_interval;// countdown
                             }, retry_interval)
@@ -362,35 +368,49 @@ module.exports = (function () {
                             reject('Failed to change the state.');
                         }
                     }
+                }).catch((e) => {
+                    __stateHasChanged(pair, stateTest); // recursive call, try again
                 })
             };
             __stateHasChanged(pair, stateTest);
         });
     };
 
-    // `_exit` Exits all active orders and trades for a given pair;
+    // `_exit` Exits all active orders and trades for a given pair.
+    // Attempts to exit 5 times, each attempt with an updated price.
     let _exit = function (pair) {
+        let retryCount = 5;
         return new Promise((resolve, reject) => {
-            _getState().then(state => {
-                let activePair = _.find(state.activePairs, {pair: pair});
-                if (state.state === 'active' && activePair) {
-                    let orders = activePair.orders.map(order => { // Cancel all active orders
-                        return _cancelOrder(order.id);
-                    });
-                    let positions = activePair.positions.map(pos => {
-                        let side = pos.side === 'buy' ? 'sell' : 'buy';
-                        let amount = Math.abs(parseFloat(pos.amount)).toString();
-                        return _order(pair, side, amount); // Place a cancellation order for each position, with the opposite side and the same amount.
-                    });
-                    let cancellations = positions.concat(orders); // Cancel both orders and positions
-                    Promise.all(cancellations).then(() => { // Once all orders and positions have been exited
-                        _stateHasChanged(pair, 'idle').then(resolve).catch(reject); // Ensure that the state has changed to idle.
-                    }).catch(reject);
+            let __exit = () => {
+                if (retryCount){
+                    retryCount--;
+                    _getState().then(state => {
+                        let activePair = _.find(state.activePairs, {pair: pair});
+                        if (activePair) {
+                            let orders = activePair.orders.map(order => { // Cancel all active orders
+                                return _cancelOrder(order.id).catch(__exit);
+                            });
+                            let positions = activePair.positions.map(pos => {
+                                let side = pos.side === 'buy' ? 'sell' : 'buy';
+                                let amount = Math.abs(parseFloat(pos.amount)).toString();
+                                return _order(pair, side, amount).catch(__exit); // Place a cancellation order for each position, with the opposite side and the same amount.
+                            });
+                            let cancellations = positions.concat(orders); // Cancel both orders and positions
+                            Promise.all(cancellations).then(() => { // Once all orders and positions have been exited
+                                logger.log('Submitted exit orders. Now checking state.');
+                                _stateHasChanged(pair, 'idle').then(resolve).catch(__exit); // Ensure that the state has changed to idle.
+                            }).catch(__exit); // Retry if it fails.
+                        }
+                        else {
+                            resolve('No active positions for: ' + pair); // Resolve because bot was already idle for this pair
+                        }
+                    }).catch(__exit);
                 }
                 else {
-                    resolve('No active positions for ' + pair); // Resolve because bot was already idle for that pair
+                    reject('too many failed exit attempts for: ' + pair);
                 }
-            })
+            };
+            __exit();
         });
     };
 
@@ -399,6 +419,7 @@ module.exports = (function () {
         return new Promise((resolve, reject) => {
             bitfinexRest.cancel_order(orderId.toString(), (err, res) => {
                 if (!err) {
+                    logger.log('Cancelled order: ' + orderId );
                     resolve(res);
                 }
                 else {
@@ -460,23 +481,30 @@ module.exports = (function () {
         return new Promise((resolve, reject) => {
             _getState().then(state => {
                 let activePair = _.find(state.activePairs, {pair: pair});
-                if (state.state === 'active' && activePair && activePair.side === side) {// There is already an active position on the specified side for this pair.
-                    reject('There is already a ' + side + ' in place for ' + pair); // The sides are the same. No adding to a position for now.
-                }
-                else if (state.state === 'active' && activePair && activePair.side !== side) { // Swing trade - exit and then place new order
+                let retryCount = 5; // Allows five failed attempts at the placing the order, taking a total of 5 x 30 seconds ( 2 and a half minutes total )
+                let orderPromise = () => {
+                    if (retryCount){
+                        retryCount --;
+                        return _order(pair, side);
+                    }
+                    else {
+                        reject('Too many failed attempts at placing a ' + pair + ' trade.');
+                    }
+                };
+                if (state.state === 'active' && activePair && activePair.side !== side) { // Swing trade - exit and then place new order
                     _exit(pair).then(() => {
-                        _order(pair, side).then(() => { // Once the initial position has been exited, place the new order.
+                        orderPromise().then(() => { // Once the initial position has been exited, place the new order.
                             _stateHasChanged(pair, side).then(resolve).catch(reject); // Check that the state has changed to the new side
-                        }).catch(reject);
-                    }).catch(reject);
+                        }).catch(orderPromise); // When it fails we attempt to place a trade using the same order promise. The asset price updates with each repetition.
+                    }).catch(reject); // When it fails we attempt to exit again using the same exit promise. The asset price updates with each repetition.
                 }
                 else if (state.state === 'idle') { // The state was previously idle
-                    _order(pair, side).then(() => { // Vanilla trade
+                    orderPromise().then(() => { // Vanilla trade
                         _stateHasChanged(pair, side).then(resolve).catch(reject); // Check that the state has changed to the new side
-                    }).catch(reject);
+                    }).catch(orderPromise); // When it fails we attempt to place a trade using the same order promise. The asset price updates with each repetition.
                 }
-                else {
-                    reject('Unknown state');
+                else if (state.state === 'active' && activePair && activePair.side === side) {// There is already an active position on the specified side for this pair.
+                    reject('There is already a ' + side + ' in place for ' + pair); // The sides are the same. No adding to a position for now.
                 }
             })
         })

@@ -14,6 +14,11 @@ module.exports = (function() {
 
     (function getIntput(result){
 
+        let exit = (e) => {
+            logger.error(e);
+            process.exit();
+        };
+
         if(result) logger.log(result);
         logger.log(`Pick an action: [b]alances, [buy], [sell], [e]xit, [s]tate, [o]rders, [p]ositions`);
 
@@ -22,25 +27,25 @@ module.exports = (function() {
             if(!err && res.action){
                 switch( res.action ){
                     case 'b':
-                        exchange.getBalances().then(getIntput).catch(logger.error);
+                        exchange.getBalances().then(getIntput).catch(exit);
                         break;
                     case 'buy':
-                        exchange.trade('ETHBTC', 'buy').then(getIntput).catch(logger.error);
+                        exchange.trade('ETHBTC', 'buy').then(getIntput).catch(exit);
                         break;
                     case 'sell':
-                        exchange.trade('ETHBTC', 'sell').then(getIntput).catch(logger.error);
+                        exchange.trade('ETHBTC', 'sell').then(getIntput).catch(exit);
                         break;
                     case 'e':
-                        exchange.exit('ETHBTC').then(getIntput).catch(logger.error);
+                        exchange.exit('ETHBTC').then(getIntput).catch(exit);
                         break;
                     case 's':
-                        exchange.getState().then(getIntput).catch(logger.error);
+                        exchange.getState().then(getIntput).catch(exit);
                         break;
                     case 'o':
-                        exchange.getActiveOrders().then(getIntput).catch(logger.error);
+                        exchange.getActiveOrders().then(getIntput).catch(exit);
                         break;
                     case 'p':
-                        exchange.getActivePositions().then(getIntput).catch(logger.error);
+                        exchange.getActivePositions().then(getIntput).catch(exit);
                         break;
                     default:
                         getIntput('Wrong selection');
