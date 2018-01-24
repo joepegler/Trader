@@ -16,6 +16,7 @@ module.exports = (function() {
     app.use(bodyParser.urlencoded({ extended: true }));
 
     exchange.init(pairs).catch(logger.error);
+    logger.init(exchange);
 
     app
         .all('*', function (req, res, next) {

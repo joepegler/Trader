@@ -2,10 +2,13 @@ module.exports = (function() {
     "use strict";
 
     const moment = require('moment');
-    const telegram = require('./telegram');
     const fs = require('fs');
+    const telegram = require('./telegram');
 
     const logger = {
+        init: exchange => {
+            telegram.init(exchange);
+        },
         log: (messageOne, messageTwo) => {
             let msg = '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + '] ';
             if (typeof messageOne === 'object') {
