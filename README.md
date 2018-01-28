@@ -66,4 +66,4 @@
 
 ## Server configuration
 - [pm2](http://pm2.keymetrics.io/) was used in place of node as an advanced, production process manager for Node.js. Start pm2 with the command: 
-    - `pm2 start app.js --name trader`
+    - `pm2 start src/app.js --name trader`
