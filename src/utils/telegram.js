@@ -27,7 +27,7 @@ module.exports = (function() {
                                 exchange.trade('ETHBTC', 'sell').then(respond).catch(respond);
                                 break;
                             case 'exit':
-                                exchange.exitAll().then(respond).catch(respond);
+                                exchange.exit().then(respond).catch(respond);
                                 break;
                             case 'state':
                                 exchange.getState().then(respond).catch(respond);
