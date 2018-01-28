@@ -149,6 +149,7 @@
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _init = <span class="hljs-function">(<span class="hljs-params">pairs</span>) =&gt;</span> {
+        logger.log(<span class="hljs-string">'init'</span>);
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             exchangePairNames = _.pickBy(exchangePairNames, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">coinVal, coinName</span>) </span>{ <span class="hljs-comment">// exchangePairNames needs to be filtered by the 'pairs' argument</span>
                 <span class="hljs-keyword">return</span> _.includes(pairs, coinName)
@@ -203,24 +204,6 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
-              <p><code>_pairIsEnabled</code> is used to determine
-which pairs were initialised during setup</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _pairIsEnabled = <span class="hljs-function">(<span class="hljs-params">pair</span>) =&gt;</span> {
-        <span class="hljs-keyword">return</span> !!_.invert(exchangePairNames)[pair];
-    };</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-10">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-10">&#182;</a>
-              </div>
               <p><code>_getBalances</code> returns a balances array. The balances
 list the available tradeable balance for each coin,
 with (tradeable) and without (balance) leverage.</p>
@@ -235,6 +218,7 @@ with (tradeable) and without (balance) leverage.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getBalances = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+        logger.log(<span class="hljs-string">'getBalances'</span>);
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             bitfinexRest.margin_infos(<span class="hljs-function">(<span class="hljs-params">err, data</span>) =&gt;</span> { <span class="hljs-comment">// Gets bitfinex account margin data</span>
                 <span class="hljs-keyword">if</span> (!err) {
@@ -250,7 +234,7 @@ with (tradeable) and without (balance) leverage.</p>
                     resolve(balances);
                 }
                 <span class="hljs-keyword">else</span> {
-                    reject(err); <span class="hljs-comment">// Reject the promise</span>
+                    reject(<span class="hljs-string">'Couldn\'t retrieve your balance'</span>);
                 }
             });
         });
@@ -259,11 +243,11 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-11">
+        <li id="section-10">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-11">&#182;</a>
+                <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
               <p><code>_getActiveOrders</code> returns all active orders active on bitfinex</p>
 <pre><code> [
@@ -278,6 +262,7 @@ with (tradeable) and without (balance) leverage.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getActiveOrders = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+        logger.log(<span class="hljs-string">'getActiveOrders'</span>);
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             bitfinexRest.active_orders(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, activeOrderResponse</span>) </span>{
                 <span class="hljs-keyword">if</span> (!err) {</pre></div></div>
@@ -285,11 +270,11 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-12">
+        <li id="section-11">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-12">&#182;</a>
+                <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
               <pre><code> activeOrderResponse = [
      {
@@ -325,13 +310,16 @@ with (tradeable) and without (balance) leverage.</p>
                             <span class="hljs-attr">id</span>: activeOrder.id.toString(),
                             <span class="hljs-attr">pair</span>: invertedMap[activeOrder.symbol.toUpperCase()],
                             <span class="hljs-attr">price</span>: <span class="hljs-built_in">parseFloat</span>(activeOrder.price),
-                            <span class="hljs-attr">side</span>: activeOrder.side
+                            <span class="hljs-attr">side</span>: activeOrder.side,
+                            <span class="hljs-attr">original_amount</span>: <span class="hljs-built_in">parseFloat</span>(activeOrder.original_amount).toString(),
+                            <span class="hljs-attr">remaining_amount</span>: <span class="hljs-built_in">parseFloat</span>(activeOrder.remaining_amount).toString(),
+                            <span class="hljs-attr">executed_amount</span>: <span class="hljs-built_in">parseFloat</span>(activeOrder.executed_amount).toString()
                         })
                     });
                     resolve(activeOrders);
                 }
                 <span class="hljs-keyword">else</span> {
-                    reject(err);
+                    reject(<span class="hljs-string">'Couldn\'t retrieve your active orders'</span>);
                 }
             });
         });
@@ -340,11 +328,11 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-13">
+        <li id="section-12">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-13">&#182;</a>
+                <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
               <p><code>_getActivePositions</code> returns all active positions active on bitfinex</p>
 <pre><code>[
@@ -361,6 +349,7 @@ with (tradeable) and without (balance) leverage.</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getActivePositions = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+        logger.log(<span class="hljs-string">'getActivePositions'</span>);
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             bitfinexRest.active_positions(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err, activePositionResponse</span>) </span>{
                 <span class="hljs-keyword">if</span> (!err) {</pre></div></div>
@@ -368,11 +357,11 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-14">
+        <li id="section-13">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-14">&#182;</a>
+                <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
               <pre><code> activePositionResponse = [
      {
@@ -397,11 +386,11 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-15">
+        <li id="section-14">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-15">&#182;</a>
+                <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
               <pre><code> {
      <span class="hljs-string">"id"</span>: <span class="hljs-number">38613045</span>,
@@ -437,7 +426,7 @@ with (tradeable) and without (balance) leverage.</p>
                     }
                 }
                 <span class="hljs-keyword">else</span> {
-                    reject(err);
+                    reject(<span class="hljs-string">'Couldn\'t retrieve your active positions'</span>);
                 }
             });
         });
@@ -446,11 +435,11 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-16">
+        <li id="section-15">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-16">&#182;</a>
+                <a class="pilcrow" href="#section-15">&#182;</a>
               </div>
               <p><code>_getState</code> gets bot state</p>
 <pre><code>state = {
@@ -472,13 +461,22 @@ with (tradeable) and without (balance) leverage.</p>
             <span class="hljs-string">"profit"</span>: <span class="hljs-number">-0.00001565073259794</span>,
             <span class="hljs-string">"side"</span>: <span class="hljs-string">"buy"</span>
         }],
-        <span class="hljs-string">"orders"</span>: []
+        <span class="hljs-string">"orders"</span>: [{
+             <span class="hljs-string">"id"</span>:<span class="hljs-number">5243424763</span>,
+             <span class="hljs-string">"pair"</span>:<span class="hljs-string">"ETHBTC"</span>,
+             <span class="hljs-string">"price"</span>: <span class="hljs-number">0.043615</span>,
+             <span class="hljs-string">"side"</span>:<span class="hljs-string">"buy"</span>,
+             <span class="hljs-string">"original_amount"</span>: <span class="hljs-number">12</span>,
+             <span class="hljs-string">"remaining_amount"</span>: <span class="hljs-number">10</span>,
+             <span class="hljs-string">"executed_amount"</span> : <span class="hljs-number">2</span>,
+        }]
     }]
 }
 </code></pre>
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _getState = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+        logger.log(<span class="hljs-string">'getState'</span>);
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             _getBalances().then(<span class="hljs-function"><span class="hljs-params">balances</span> =&gt;</span> {
                 <span class="hljs-keyword">let</span> state = {
@@ -493,11 +491,11 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-17">
+        <li id="section-16">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-17">&#182;</a>
+                <a class="pilcrow" href="#section-16">&#182;</a>
               </div>
               <pre><code>position = {
     <span class="hljs-attr">id</span>: <span class="hljs-number">38168717</span>,
@@ -510,7 +508,7 @@ with (tradeable) and without (balance) leverage.</p>
 </code></pre>
             </div>
             
-            <div class="content"><div class='highlight'><pre>                            <span class="hljs-keyword">if</span> (_pairIsEnabled(position.pair)) {
+            <div class="content"><div class='highlight'><pre>                            <span class="hljs-keyword">if</span> (utils.pairIsEnabled(position.pair)) {
                                 <span class="hljs-keyword">let</span> activePair = _.find(state.pairs, {<span class="hljs-attr">pair</span>: position.pair});
                                 <span class="hljs-keyword">let</span> activePairIndex = _.findIndex(state.pairs, {<span class="hljs-attr">pair</span>: position.pair});
                                 <span class="hljs-keyword">if</span> (!activePair) { <span class="hljs-comment">// Set the state to active</span>
@@ -535,11 +533,11 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-18">
+        <li id="section-17">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-18">&#182;</a>
+                <a class="pilcrow" href="#section-17">&#182;</a>
               </div>
               <pre><code> order = {
      <span class="hljs-string">"id"</span>:<span class="hljs-number">5243424763</span>,
@@ -550,10 +548,11 @@ with (tradeable) and without (balance) leverage.</p>
 </code></pre>
             </div>
             
-            <div class="content"><div class='highlight'><pre>                            <span class="hljs-keyword">if</span> (_pairIsEnabled(order.pair)) {
+            <div class="content"><div class='highlight'><pre>                            <span class="hljs-keyword">if</span> (utils.pairIsEnabled(order.pair)) {
                                 <span class="hljs-keyword">let</span> activePair = _.find(state.pairs, {<span class="hljs-attr">pair</span>: order.pair});
                                 <span class="hljs-keyword">let</span> activePairIndex = _.findIndex(state.pairs, {<span class="hljs-attr">pair</span>: order.pair});
                                 <span class="hljs-keyword">if</span> (!activePair) {
+                                    state.state = <span class="hljs-string">'pending'</span>;
                                     <span class="hljs-keyword">let</span> balance = _.find(balances, {<span class="hljs-attr">pair</span>: order.pair});
                                     <span class="hljs-keyword">if</span> (balance) balance = balance.balance;
                                     activePair = {<span class="hljs-comment">// Initialise the activePair with default state.</span>
@@ -579,64 +578,18 @@ with (tradeable) and without (balance) leverage.</p>
         </li>
         
         
-        <li id="section-19">
+        <li id="section-18">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-19">&#182;</a>
-              </div>
-              <p><code>_stateHasChanged</code> checks to ensure that the state of the bot
-has changed. Retries every 3 seconds for up to 15 seconds.</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _stateHasChanged = <span class="hljs-function">(<span class="hljs-params">pair, stateTest</span>) =&gt;</span> {
-        <span class="hljs-keyword">let</span> retry_interval = <span class="hljs-number">1000</span> * <span class="hljs-number">3</span>; <span class="hljs-comment">// 3 seconds</span>
-        <span class="hljs-keyword">let</span> hardStop = <span class="hljs-number">5</span> * retry_interval; <span class="hljs-comment">// 15 seconds</span>
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
-            <span class="hljs-keyword">let</span> __stateHasChanged = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pair, stateTest</span>) </span>{
-                _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
-                    <span class="hljs-keyword">let</span> activePair = _.find(state.activePairs, {<span class="hljs-attr">pair</span>: pair});
-                    <span class="hljs-keyword">if</span> (
-                        (state.state === <span class="hljs-string">'active'</span> &amp;&amp; activePair.side === stateTest) || <span class="hljs-comment">// 'There are active positions and the side of the positions matches the test state'</span>
-                        (!activePair &amp;&amp; stateTest === <span class="hljs-string">'idle'</span>)) { <span class="hljs-comment">// There are no active positions and the test state is 'idle'.</span>
-                        logger.log(<span class="hljs-string">'State changed to: '</span> + stateTest);
-                        resolve(state); <span class="hljs-comment">// Resolve with the current state</span>
-                    }
-                    <span class="hljs-keyword">else</span> {
-                        <span class="hljs-keyword">if</span> (hardStop &gt; <span class="hljs-number">0</span>) { <span class="hljs-comment">// If time still less than the hard stop</span>
-                            setTimeout(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
-                                logger.log(<span class="hljs-string">'Retrying state change: '</span> + stateTest);
-                                __stateHasChanged(pair, stateTest); <span class="hljs-comment">// recursive call, try again</span>
-                                hardStop -= retry_interval;<span class="hljs-comment">// countdown</span>
-                            }, retry_interval)
-                        }
-                        <span class="hljs-keyword">else</span> {
-                            reject(<span class="hljs-string">'Failed to change the state.'</span>);
-                        }
-                    }
-                }).catch(<span class="hljs-function">(<span class="hljs-params">e</span>) =&gt;</span> {
-                    __stateHasChanged(pair, stateTest); <span class="hljs-comment">// recursive call, try again</span>
-                })
-            };
-            __stateHasChanged(pair, stateTest);
-        });
-    };</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-20">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-20">&#182;</a>
+                <a class="pilcrow" href="#section-18">&#182;</a>
               </div>
               <p><code>_exit</code> Exits all active orders and trades</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _exitAll = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _exit = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+        logger.log(<span class="hljs-string">'exit'</span>);
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
             <span class="hljs-keyword">let</span> cancellations = [];
             _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
@@ -649,7 +602,7 @@ has changed. Retries every 3 seconds for up to 15 seconds.</p>
                         activePairs.push(order.pair);
                     });
                 });
-                cancellations = _.uniq(activePairs).map(<span class="hljs-function"><span class="hljs-params">pair</span> =&gt;</span> { <span class="hljs-keyword">return</span> _exit(pair) });
+                cancellations = _.uniq(activePairs).map(<span class="hljs-function"><span class="hljs-params">pair</span> =&gt;</span> { <span class="hljs-keyword">return</span> _close(pair) });
                 <span class="hljs-keyword">if</span> ( !cancellations.length ){
                     resolve(<span class="hljs-string">'Bot is already idle'</span>);
                 }
@@ -663,52 +616,89 @@ has changed. Retries every 3 seconds for up to 15 seconds.</p>
         </li>
         
         
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p><code>_close</code> Exits all active orders and trades for a given pair.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _close = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">pair</span>) </span>{
+        logger.log(<span class="hljs-string">'close: '</span> + pair);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
+                <span class="hljs-keyword">let</span> activePair = _.find(state.activePairs, {<span class="hljs-attr">pair</span>: pair});
+                <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'active'</span> &amp;&amp; activePair) {
+                    <span class="hljs-keyword">let</span> orders = activePair.orders.map(<span class="hljs-function"><span class="hljs-params">order</span> =&gt;</span> { <span class="hljs-comment">// Cancel all active orders</span>
+                        <span class="hljs-keyword">return</span> _cancelOrder(order.id);
+                    });
+                    <span class="hljs-keyword">let</span> positions = activePair.positions.map(<span class="hljs-function"><span class="hljs-params">pos</span> =&gt;</span> {
+                        <span class="hljs-keyword">let</span> side = pos.side === <span class="hljs-string">'buy'</span> ? <span class="hljs-string">'sell'</span> : <span class="hljs-string">'buy'</span>;
+                        <span class="hljs-keyword">let</span> amount = <span class="hljs-built_in">Math</span>.abs(<span class="hljs-built_in">parseFloat</span>(pos.amount)).toString();
+                        <span class="hljs-keyword">return</span> _order(pair, side, amount); <span class="hljs-comment">// Place a cancellation order for each position, with the opposite side and the same amount.</span>
+                    });
+                    <span class="hljs-keyword">let</span> cancellations = positions.concat(orders); <span class="hljs-comment">// Cancel both orders and positions</span>
+                    <span class="hljs-built_in">Promise</span>.all(cancellations).then(resolve).catch(reject);
+                }
+                <span class="hljs-keyword">else</span> {
+                    resolve(<span class="hljs-string">'No active positions for '</span> + pair); <span class="hljs-comment">// Resolve because bot was already idle for that pair</span>
+                }
+            }).catch(reject)
+        });
+    };</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p><code>_cancelOrder</code> Cancels an order with the given order_id;</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _cancelOrder = <span class="hljs-function">(<span class="hljs-params">orderId</span>) =&gt;</span> {
+        logger.log(<span class="hljs-string">'cancelOrder '</span> + orderId);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            bitfinexRest.cancel_order(orderId.toString(), (err, res) =&gt; {
+                <span class="hljs-keyword">if</span> (!err) {
+                    logger.log(<span class="hljs-string">'Cancelled order: '</span> + orderId );
+                    resolve(res);
+                }
+                <span class="hljs-keyword">else</span> {
+                    reject(<span class="hljs-string">'Couldn\'t cancel your order '</span> + orderId);
+                }
+            });
+        });
+    };</pre></div></div>
+            
+        </li>
+        
+        
         <li id="section-21">
             <div class="annotation">
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-21">&#182;</a>
               </div>
-              <p><code>_exit</code> Exits all active orders and trades for a given pair.
-Attempts to exit 5 times, each attempt with an updated price.</p>
+              <p><code>_order</code> Places an order to bitfinex.
+Orders should be succesfully sent and accepted every time, but they will not always fill</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _exit = <span class="hljs-function">(<span class="hljs-params">pair</span>) =&gt;</span> {
-        <span class="hljs-keyword">let</span> retryCount = <span class="hljs-number">5</span>;
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _order = <span class="hljs-function">(<span class="hljs-params">pair, side, amount</span>) =&gt;</span> {
+        logger.log(<span class="hljs-string">'order '</span> + pair + <span class="hljs-string">', '</span> + side + <span class="hljs-string">', '</span> + amount);
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
-            <span class="hljs-keyword">let</span> __exit = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
-                <span class="hljs-keyword">if</span> (retryCount){
-                    retryCount--;
-                    _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
-                        <span class="hljs-keyword">let</span> activePair = _.find(state.activePairs, {<span class="hljs-attr">pair</span>: pair});
-                        <span class="hljs-keyword">if</span> (activePair) {
-                            <span class="hljs-keyword">let</span> orders = activePair.orders.map(<span class="hljs-function"><span class="hljs-params">order</span> =&gt;</span> { <span class="hljs-comment">// Cancel all active orders</span>
-                                <span class="hljs-keyword">return</span> _cancelOrder(order.id).catch(__exit);
-                            });
-                            <span class="hljs-keyword">let</span> positions = activePair.positions.map(<span class="hljs-function"><span class="hljs-params">pos</span> =&gt;</span> {
-                                <span class="hljs-keyword">let</span> side = pos.side === <span class="hljs-string">'buy'</span> ? <span class="hljs-string">'sell'</span> : <span class="hljs-string">'buy'</span>;
-                                <span class="hljs-keyword">let</span> amount = <span class="hljs-built_in">Math</span>.abs(<span class="hljs-built_in">parseFloat</span>(pos.amount)).toString();
-                                <span class="hljs-keyword">return</span> _order(pair, side, amount).catch(__exit); <span class="hljs-comment">// Place a cancellation order for each position, with the opposite side and the same amount.</span>
-                            });
-                            <span class="hljs-keyword">let</span> cancellations = positions.concat(orders); <span class="hljs-comment">// Cancel both orders and positions</span>
-                            <span class="hljs-built_in">Promise</span>.all(cancellations).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> { <span class="hljs-comment">// Once all orders and positions have been exited</span>
-                                logger.log(<span class="hljs-string">'Submitted exit orders. Now checking state.'</span>);
-                                _stateHasChanged(pair, <span class="hljs-string">'idle'</span>).then(resolve).catch(__exit); <span class="hljs-comment">// Ensure that the state has changed to idle.</span>
-                            }).catch(__exit); <span class="hljs-comment">// Retry if it fails.</span>
-                        }
-                        <span class="hljs-keyword">else</span> {
-                            resolve(<span class="hljs-string">'No active positions for: '</span> + pair); <span class="hljs-comment">// Resolve because bot was already idle for this pair</span>
-                        }
-                    }).catch(__exit);
-                }
-                <span class="hljs-keyword">else</span> {
-                    reject(<span class="hljs-string">'too many failed exit attempts for: '</span> + pair);
-                }
-            };
-            __exit();
-        });
-    };</pre></div></div>
+            _getBalances().then(<span class="hljs-function"><span class="hljs-params">balances</span> =&gt;</span> {
+                <span class="hljs-keyword">let</span> tradeData = utils.parseTradeArguments(balances, pair, side, amount);
+                <span class="hljs-keyword">if</span> (!tradeData.error) {
+                    tradeData = tradeData.data;</pre></div></div>
             
         </li>
         
@@ -719,153 +709,16 @@ Attempts to exit 5 times, each attempt with an updated price.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
-              <p><code>_cancelOrder</code> Cancels an order with the given order_id;</p>
+              <p>bitfinexRest.new_order(tradeData.exchangePairName, tradeData.amount, tradeData.price, tradeData.exchange, tradeData.side, tradeData.type, (err) =&gt; {// symbol, amount, price, exchange, side, type, is_hidden, postOnly, cb</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _cancelOrder = <span class="hljs-function">(<span class="hljs-params">orderId</span>) =&gt;</span> {
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
-            bitfinexRest.cancel_order(orderId.toString(), (err, res) =&gt; {
-                <span class="hljs-keyword">if</span> (!err) {
-                    logger.log(<span class="hljs-string">'Cancelled order: '</span> + orderId );
-                    resolve(res);
-                }
-                <span class="hljs-keyword">else</span> {
-                    reject(err);
-                }
-            });
-        });
-    };</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-23">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-23">&#182;</a>
-              </div>
-              <p><code>_parseTradeArguments</code> Preps an object to place an order</p>
-<pre><code> {
-     <span class="hljs-string">"pair"</span>: <span class="hljs-string">"ETHBTC"</span>,
-     <span class="hljs-string">"price"</span>: <span class="hljs-number">0.029201</span>,
-     <span class="hljs-string">"amount"</span>: <span class="hljs-string">"0.30"</span>,
-     <span class="hljs-string">"exchangePairName"</span>: <span class="hljs-string">"ETHBTC"</span>,
-     <span class="hljs-string">"exchange"</span>: <span class="hljs-string">"bitfinex"</span>,
-     <span class="hljs-string">"side"</span>: <span class="hljs-string">"buy"</span>,
-     <span class="hljs-string">"type"</span>: <span class="hljs-string">"limit"</span>
- }
-</code></pre>
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _parseTradeArguments = <span class="hljs-function">(<span class="hljs-params">balances, pair, side, amount</span>) =&gt;</span> {
-        <span class="hljs-keyword">let</span> res = {
-            <span class="hljs-attr">data</span>: {},
-            <span class="hljs-attr">error</span>: <span class="hljs-literal">null</span>
-        };
-        <span class="hljs-keyword">let</span> sides = [<span class="hljs-string">'buy'</span>, <span class="hljs-string">'sell'</span>];
-        <span class="hljs-keyword">let</span> price = side === <span class="hljs-string">'buy'</span> ? prices[pair].ask : prices[pair].bid;
-        <span class="hljs-keyword">let</span> exchangePairName = exchangePairNames[pair];
-        <span class="hljs-keyword">let</span> exchangeBalance = _.find(balances, {<span class="hljs-attr">pair</span>: pair}).balance;
-        <span class="hljs-keyword">if</span> (!_.includes(sides, side)) {
-            res.error = <span class="hljs-string">'No valid side provided'</span>;
-        }
-        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!_.includes(_.keys(exchangePairNames), pair) || !exchangePairName || !exchangePairName.length) {
-            res.error = <span class="hljs-string">'No valid pair name provided'</span>;
-        }
-        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!_.isNumber(_.find(balances, {<span class="hljs-attr">pair</span>: pair}).balance)) {
-            res.error = <span class="hljs-string">'No valid exchangeBalance provided'</span>;
-        }
-        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!_.isNumber(price) || !price) {
-            res.error = <span class="hljs-string">'No valid price provided'</span>;
-        }
-        <span class="hljs-keyword">else</span> {
-            res.data = {
-                pair,
-                <span class="hljs-attr">price</span>: price.toString(),
-                <span class="hljs-attr">amount</span>: ( amount || exchangeBalance ).toString(),
-                exchangePairName,
-                <span class="hljs-attr">exchange</span>: <span class="hljs-string">'bitfinex'</span>,
-                side,
-                <span class="hljs-attr">type</span>: <span class="hljs-string">'limit'</span>
-            };
-        }
-        <span class="hljs-keyword">return</span> res;
-    };</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-24">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-24">&#182;</a>
-              </div>
-              <p><code>_trade</code> Decides the type of order to be placed, and then places it.
-Returns the next state.</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _trade = <span class="hljs-function">(<span class="hljs-params">pair, side</span>) =&gt;</span> {
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
-            _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
-                <span class="hljs-keyword">let</span> activePair = _.find(state.activePairs, {<span class="hljs-attr">pair</span>: pair});
-                <span class="hljs-keyword">let</span> retryCount = <span class="hljs-number">5</span>; <span class="hljs-comment">// Allows five failed attempts at the placing the order, taking a total of 5 x 30 seconds ( 2 and a half minutes total )</span>
-                <span class="hljs-keyword">let</span> orderPromise = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
-                    <span class="hljs-keyword">if</span> (retryCount){
-                        retryCount --;
-                        <span class="hljs-keyword">return</span> _order(pair, side);
-                    }
-                    <span class="hljs-keyword">else</span> {
-                        reject(<span class="hljs-string">'Too many failed attempts at placing a '</span> + pair + <span class="hljs-string">' trade.'</span>);
-                    }
-                };
-                <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'active'</span> &amp;&amp; activePair &amp;&amp; activePair.side !== side) { <span class="hljs-comment">// Swing trade - exit and then place new order</span>
-                    _exit(pair).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
-                        orderPromise().then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> { <span class="hljs-comment">// Once the initial position has been exited, place the new order.</span>
-                            _stateHasChanged(pair, side).then(resolve).catch(reject); <span class="hljs-comment">// Check that the state has changed to the new side</span>
-                        }).catch(orderPromise); <span class="hljs-comment">// When it fails we attempt to place a trade using the same order promise. The asset price updates with each repetition.</span>
-                    }).catch(reject); <span class="hljs-comment">// When it fails we attempt to exit again using the same exit promise. The asset price updates with each repetition.</span>
-                }
-                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'idle'</span>) { <span class="hljs-comment">// The state was previously idle</span>
-                    orderPromise().then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> { <span class="hljs-comment">// Vanilla trade</span>
-                        _stateHasChanged(pair, side).then(resolve).catch(reject); <span class="hljs-comment">// Check that the state has changed to the new side</span>
-                    }).catch(orderPromise); <span class="hljs-comment">// When it fails we attempt to place a trade using the same order promise. The asset price updates with each repetition.</span>
-                }
-                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'active'</span> &amp;&amp; activePair &amp;&amp; activePair.side === side) {<span class="hljs-comment">// There is already an active position on the specified side for this pair.</span>
-                    reject(<span class="hljs-string">'There is already a '</span> + side + <span class="hljs-string">' in place for '</span> + pair); <span class="hljs-comment">// The sides are the same. No adding to a position for now.</span>
-                }
-            })
-        })
-    };</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-25">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-25">&#182;</a>
-              </div>
-              <p><code>_order</code> Places an order to bitfinex.</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _order = <span class="hljs-function">(<span class="hljs-params">pair, side, amount</span>) =&gt;</span> {
-        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
-            _getBalances().then(<span class="hljs-function"><span class="hljs-params">balances</span> =&gt;</span> {
-                <span class="hljs-keyword">let</span> tradeData = _parseTradeArguments(balances, pair, side, amount);
-                <span class="hljs-keyword">if</span> (!tradeData.error) {
-                    tradeData = tradeData.data;
-                    bitfinexRest.new_order(tradeData.exchangePairName, tradeData.amount, tradeData.price, tradeData.exchange, tradeData.side, tradeData.type, (err, data) =&gt; {<span class="hljs-comment">// symbol, amount, price, exchange, side, type, is_hidden, postOnly, cb</span>
+            <div class="content"><div class='highlight'><pre>                    bitfinexRest.new_order(tradeData.exchangePairName, <span class="hljs-string">"0.02"</span>, tradeData.price, tradeData.exchange, tradeData.side, tradeData.type, (err) =&gt; {<span class="hljs-comment">// symbol, amount, price, exchange, side, type, is_hidden, postOnly, cb</span>
                         <span class="hljs-keyword">if</span> (!err) {
                             resolve();
                         }
                         <span class="hljs-keyword">else</span> {
-                            reject(err);
+                            reject(<span class="hljs-string">'Couldn\'t place a your order'</span>);
                         }
                     });
                 }
@@ -879,11 +732,289 @@ Returns the next state.</p>
         </li>
         
         
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p><code>_swingTrade</code> Attempts to change state from buy to sell or vice versa.
+It is only possible to swing trade if there are no active orders and an active position.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _swingTrade = <span class="hljs-function">(<span class="hljs-params">pair, side</span>) =&gt;</span> {
+        logger.log(<span class="hljs-string">'swingTrade '</span> + <span class="hljs-string">', '</span> + pair + <span class="hljs-string">', '</span> + side);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
+                <span class="hljs-keyword">let</span> activePair = _.find(state.activePairs, {<span class="hljs-attr">pair</span>: pair});
+                <span class="hljs-keyword">let</span> repeater = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                    utils.recursiveTry(_stateHasChanged, [pair, <span class="hljs-string">'idle'</span>], <span class="hljs-string">'stateHasChanged'</span>, <span class="hljs-number">5</span>, <span class="hljs-number">5</span>).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> { <span class="hljs-comment">// then poll for state change</span>
+                        _openNewPosition(pair, side).then(resolve).catch(reject)
+                    }).catch(<span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{
+                        _resolvePendingOrders().then(repeater).catch(reject); <span class="hljs-comment">// Repeat until the state successfully changes to idle. The</span>
+                    })
+                };
+                <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'active'</span> &amp;&amp; activePair &amp;&amp; activePair.side !== side) { <span class="hljs-comment">// Swing trade - exit and then place new order in new direction</span>
+                    _close(pair).then(repeater).catch(reject);
+                }
+                <span class="hljs-keyword">else</span> {
+                    reject(<span class="hljs-string">'Cannot swing trade when bot '</span> + state.state);
+                }
+            }).catch(reject);
+        })
+    };</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p><code>_openNewPosition</code> Places a trade if the bot had previously been idle.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _openNewPosition = <span class="hljs-function">(<span class="hljs-params">pair, side, amount</span>) =&gt;</span> {
+        logger.log(<span class="hljs-string">'openNewPosition '</span> + pair + <span class="hljs-string">', '</span> + side + <span class="hljs-string">', '</span> + amount);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            <span class="hljs-keyword">let</span> repeater = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                utils.recursiveTry(_stateHasChanged, [pair, side], <span class="hljs-string">'stateHasChanged'</span>, <span class="hljs-number">5</span>, <span class="hljs-number">5</span>).then(resolve).catch(<span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{ <span class="hljs-comment">// Poll for state change. Resolve pending orders again if it fails.</span>
+                    _resolvePendingOrders().then(repeater).catch(reject); <span class="hljs-comment">// Repeat until the state successfully changes to idle.</span>
+                })
+            };
+            _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
+                <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'idle'</span>) { <span class="hljs-comment">// The state was previously idle</span>
+                    _order(pair, side, amount).then(repeater).catch(reject);
+                }
+                <span class="hljs-keyword">else</span> {
+                    reject(<span class="hljs-string">'Cannot open a new position when bot is '</span> + state.state);
+                }
+            }).catch(reject);
+        })
+    };</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p><code>_resolvePendingOrders</code> Places cancels all active orders and places them again with a new price and amount if there was a partial fill.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _resolvePendingOrders = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+        logger.log(<span class="hljs-string">'resolvePendingOrders'</span>);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
+                <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'pending'</span>) { <span class="hljs-comment">// The state was previously pending</span>
+                    <span class="hljs-keyword">let</span> pendingPair = _.find(state.activePairs, aP =&gt; { <span class="hljs-keyword">return</span> aP.orders.length === <span class="hljs-number">1</span>; });
+                    <span class="hljs-keyword">let</span> order = pendingPair.orders[<span class="hljs-number">0</span>]; <span class="hljs-comment">// There should only ever be one order.</span>
+                    _cancelOrder( order.id ).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                        _openNewPosition(order.pair, order.side, order.remaining_amount).then(resolve).catch(reject); <span class="hljs-comment">// Updates the order price</span>
+                    }).catch(reject);
+                }
+                <span class="hljs-keyword">else</span> {
+                    reject(<span class="hljs-string">'Cannot resolve pending orders when bot is '</span> + state.state);
+                }
+            }).catch(reject);
+        })
+    };</pre></div></div>
+            
+        </li>
+        
+        
         <li id="section-26">
             <div class="annotation">
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p><code>_trade</code> Decides the type of order to be placed, and then places it.
+Returns the next state.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _trade = <span class="hljs-function">(<span class="hljs-params">pair, side, amount</span>) =&gt;</span> {
+        logger.log(<span class="hljs-string">'trade '</span> + pair + <span class="hljs-string">', '</span> + side);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
+                <span class="hljs-keyword">let</span> activePair = _.find(state.activePairs, {<span class="hljs-attr">pair</span>: pair});
+                <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'active'</span> &amp;&amp; activePair &amp;&amp; activePair.side !== side) { <span class="hljs-comment">// Swing trade - exit and then place new order in new direction</span>
+                    _swingTrade(pair, side).then(resolve).catch(reject);
+                }
+                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'idle'</span>) { <span class="hljs-comment">// The state was previously idle</span>
+                    _openNewPosition(pair, side, amount).then(resolve).catch(reject);
+                }
+                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'active'</span> &amp;&amp; activePair &amp;&amp; activePair.side === side) {<span class="hljs-comment">// There is already an active position on the specified side for this pair.</span>
+                    reject(<span class="hljs-string">'There is already a '</span> + side + <span class="hljs-string">' in place for '</span> + pair); <span class="hljs-comment">// The sides are the same. No adding to a position for now.</span>
+                }
+                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (state.state === <span class="hljs-string">'pending'</span>){
+                    reject(<span class="hljs-string">'Cannot place trades when bot is '</span> + state.state);
+                }
+            }).catch(reject);
+        })
+    };</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p><code>stateHasChanged</code> checks to ensure that the state of the bot
+has changed. Retries every 3 seconds for up to 15 seconds.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">let</span> _stateHasChanged = <span class="hljs-function">(<span class="hljs-params">pair, stateTest</span>) =&gt;</span> {
+        logger.log(<span class="hljs-string">'stateHasChanged: '</span> + pair + <span class="hljs-string">', '</span> + stateTest);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            _getState().then(<span class="hljs-function"><span class="hljs-params">state</span> =&gt;</span> {
+                <span class="hljs-keyword">let</span> activePair = _.find(state.activePairs, {<span class="hljs-attr">pair</span>: pair});
+                <span class="hljs-keyword">if</span> (
+                    (state.state === <span class="hljs-string">'active'</span> &amp;&amp; activePair.side === stateTest) || <span class="hljs-comment">// 'There are active positions and the side of the positions matches the test state'</span>
+                    (!activePair &amp;&amp; stateTest === <span class="hljs-string">'idle'</span>)) { <span class="hljs-comment">// There are no active positions and the test state is 'idle'.</span>
+                    resolve(state); <span class="hljs-comment">// Resolve with the current state</span>
+                }
+                <span class="hljs-keyword">else</span> {
+                    reject(<span class="hljs-string">'Failed to change the state.'</span>);
+                }
+            }).catch(reject)
+        });
+    };
+
+    <span class="hljs-keyword">let</span> utils = {</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p><code>recursiveTry</code> Is a helper function used to attempt a function the noOfAttempts is exceeded.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        recursiveTry: <span class="hljs-function">(<span class="hljs-params">attemptFunction, args, name, noOfAttempts, delay</span>) =&gt;</span> {
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+                delay = _.isNumber(delay) ? delay : <span class="hljs-number">0</span>; <span class="hljs-comment">// Default delay is 0</span>
+                <span class="hljs-keyword">let</span> retryCount = noOfAttempts || <span class="hljs-number">5</span>; <span class="hljs-comment">// Allows five failed attempts at executing the attemptFunction</span>
+                <span class="hljs-keyword">let</span> newAttempt = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                    attemptFunction.apply(<span class="hljs-keyword">this</span>, args).then(resolve).catch(tryAgain);
+                };
+                <span class="hljs-keyword">let</span> tryAgain = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+                    logger.log(<span class="hljs-string">'recursiveTry ('</span> + retryCount + <span class="hljs-string">') '</span> + name + <span class="hljs-string">', '</span> + <span class="hljs-built_in">JSON</span>.stringify(args));
+                    retryCount--;
+                    <span class="hljs-keyword">if</span> (retryCount) {
+                        setTimeout(newAttempt, delay * <span class="hljs-number">1000</span>);
+                    }
+                    <span class="hljs-keyword">else</span> {
+                        reject(<span class="hljs-string">'Failed '</span> + name + <span class="hljs-string">' '</span> + retryCount + <span class="hljs-string">' times.'</span>);
+                    }
+                };
+                tryAgain(); <span class="hljs-comment">// Try for the first time.</span>
+            });
+        },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p><code>parseTradeArguments</code> Preps an object to place an order</p>
+<pre><code> {
+     <span class="hljs-string">"pair"</span>: <span class="hljs-string">"ETHBTC"</span>,
+     <span class="hljs-string">"price"</span>: <span class="hljs-number">0.029201</span>,
+     <span class="hljs-string">"amount"</span>: <span class="hljs-string">"0.30"</span>,
+     <span class="hljs-string">"exchangePairName"</span>: <span class="hljs-string">"ETHBTC"</span>,
+     <span class="hljs-string">"exchange"</span>: <span class="hljs-string">"bitfinex"</span>,
+     <span class="hljs-string">"side"</span>: <span class="hljs-string">"buy"</span>,
+     <span class="hljs-string">"type"</span>: <span class="hljs-string">"limit"</span>
+ }
+</code></pre>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        parseTradeArguments: <span class="hljs-function">(<span class="hljs-params">balances, pair, side, amount</span>) =&gt;</span> {
+            logger.log(<span class="hljs-string">'parseTradeArguments '</span> + <span class="hljs-built_in">JSON</span>.stringify(balances) + <span class="hljs-string">', '</span> + pair + <span class="hljs-string">', '</span> + side + <span class="hljs-string">', '</span> + amount);
+            <span class="hljs-keyword">let</span> res = {
+                <span class="hljs-attr">data</span>: {},
+                <span class="hljs-attr">error</span>: <span class="hljs-literal">null</span>
+            };
+            <span class="hljs-keyword">let</span> sides = [<span class="hljs-string">'buy'</span>, <span class="hljs-string">'sell'</span>];
+            <span class="hljs-keyword">let</span> price = side === <span class="hljs-string">'buy'</span> ? prices[pair].ask : prices[pair].bid;
+            <span class="hljs-keyword">let</span> exchangePairName = exchangePairNames[pair];
+            <span class="hljs-keyword">let</span> exchangeBalance = _.find(balances, {<span class="hljs-attr">pair</span>: pair}).balance;
+            <span class="hljs-keyword">if</span> (!_.includes(sides, side)) {
+                res.error = <span class="hljs-string">'No valid side provided'</span>;
+            }
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!_.includes(_.keys(exchangePairNames), pair) || !exchangePairName || !exchangePairName.length) {
+                res.error = <span class="hljs-string">'No valid pair name provided'</span>;
+            }
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!_.isNumber(_.find(balances, {<span class="hljs-attr">pair</span>: pair}).balance)) {
+                res.error = <span class="hljs-string">'No valid exchangeBalance provided'</span>;
+            }
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!_.isNumber(price) || !price) {
+                res.error = <span class="hljs-string">'No valid price provided'</span>;
+            }
+            <span class="hljs-keyword">else</span> {
+                res.data = {
+                    pair,
+                    <span class="hljs-attr">price</span>: price.toString(),
+                    <span class="hljs-attr">amount</span>: ( amount || exchangeBalance ).toString(),
+                    exchangePairName,
+                    <span class="hljs-attr">exchange</span>: <span class="hljs-string">'bitfinex'</span>,
+                    side,
+                    <span class="hljs-attr">type</span>: <span class="hljs-string">'limit'</span>
+                };
+            }
+            <span class="hljs-keyword">return</span> res;
+        },</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p><code>pairIsEnabled</code> is used to determine
+which pairs were initialised during setup</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        pairIsEnabled: <span class="hljs-function"><span class="hljs-params">pair</span> =&gt;</span> {
+            <span class="hljs-keyword">return</span> !!_.invert(exchangePairNames)[pair];
+        }
+    };</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
               </div>
               <p>Exposed public functions</p>
 
@@ -891,14 +1022,15 @@ Returns the next state.</p>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> {
         <span class="hljs-attr">init</span>: _init,
+        <span class="hljs-attr">close</span>: _close,
         <span class="hljs-attr">exit</span>: _exit,
-        <span class="hljs-attr">exitAll</span>: _exitAll,
         <span class="hljs-attr">trade</span>: _trade,
         <span class="hljs-attr">order</span>: _order,
         <span class="hljs-attr">getState</span>: _getState,
         <span class="hljs-attr">getBalances</span>: _getBalances,
         <span class="hljs-attr">getActiveOrders</span>: _getActiveOrders,
         <span class="hljs-attr">getActivePositions</span>: _getActivePositions,
+        <span class="hljs-attr">resolvePendingOrders</span>: _resolvePendingOrders
     };
 })();</pre></div></div>
             

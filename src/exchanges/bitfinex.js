@@ -34,6 +34,7 @@ module.exports = (function () {
     // ----------------
     // `_init` Initiates the price ticker and retrieves the current account balance
     let _init = (pairs) => {
+        logger.log('init');
         return new Promise((resolve, reject) => {
             exchangePairNames = _.pickBy(exchangePairNames, function (coinVal, coinName) { // exchangePairNames needs to be filtered by the 'pairs' argument
                 return _.includes(pairs, coinName)
@@ -79,12 +80,6 @@ module.exports = (function () {
         });
     };
 
-    // `_pairIsEnabled` is used to determine
-    // which pairs were initialised during setup
-    let _pairIsEnabled = (pair) => {
-        return !!_.invert(exchangePairNames)[pair];
-    };
-
     // `_getBalances` returns a balances array. The balances
     // list the available tradeable balance for each coin,
     // with (tradeable) and without (balance) leverage.
@@ -98,6 +93,7 @@ module.exports = (function () {
     //      ]
     //
     let _getBalances = () => {
+        logger.log('getBalances');
         return new Promise((resolve, reject) => {
             bitfinexRest.margin_infos((err, data) => { // Gets bitfinex account margin data
                 if (!err) {
@@ -113,7 +109,7 @@ module.exports = (function () {
                     resolve(balances);
                 }
                 else {
-                    reject(err); // Reject the promise
+                    reject('Couldn\'t retrieve your balance');
                 }
             });
         });
@@ -130,6 +126,7 @@ module.exports = (function () {
     //          },
     //      ]
     let _getActiveOrders = () => {
+        logger.log('getActiveOrders');
         return new Promise((resolve, reject) => {
             bitfinexRest.active_orders(function (err, activeOrderResponse) {
                 if (!err) {
@@ -164,13 +161,14 @@ module.exports = (function () {
                             id: activeOrder.id.toString(),
                             pair: invertedMap[activeOrder.symbol.toUpperCase()],
                             price: parseFloat(activeOrder.price),
-                            side: activeOrder.side
+                            side: activeOrder.side,
+                            remaining_amount: parseFloat(activeOrder.remaining_amount).toString()
                         })
                     });
                     resolve(activeOrders);
                 }
                 else {
-                    reject(err);
+                    reject('Couldn\'t retrieve your active orders');
                 }
             });
         });
@@ -189,6 +187,7 @@ module.exports = (function () {
     //          }
     //     ]
     let _getActivePositions = () => {
+        logger.log('getActivePositions');
         return new Promise((resolve, reject) => {
             bitfinexRest.active_positions(function (err, activePositionResponse) {
                 if (!err) {
@@ -239,7 +238,7 @@ module.exports = (function () {
                     }
                 }
                 else {
-                    reject(err);
+                    reject('Couldn\'t retrieve your active positions');
                 }
             });
         });
@@ -266,10 +265,17 @@ module.exports = (function () {
     //                 "profit": -0.00001565073259794,
     //                 "side": "buy"
     //             }],
-    //             "orders": []
+    //             "orders": [{
+    //                  "id":5243424763,
+    //                  "pair":"ETHBTC",
+    //                  "price": 0.043615,
+    //                  "side":"buy",
+    //                  "remaining_amount": 10
+    //             }]
     //         }]
     //     }
     let _getState = () => {
+        logger.log('getState');
         return new Promise((resolve, reject) => {
             _getBalances().then(balances => {
                 let state = {
@@ -288,7 +294,7 @@ module.exports = (function () {
                             //         profit: -0.000030805,
                             //         side: 'buy'
                             //     }
-                            if (_pairIsEnabled(position.pair)) {
+                            if (utils.pairIsEnabled(position.pair)) {
                                 let activePair = _.find(state.pairs, {pair: position.pair});
                                 let activePairIndex = _.findIndex(state.pairs, {pair: position.pair});
                                 if (!activePair) { // Set the state to active
@@ -315,10 +321,11 @@ module.exports = (function () {
                             //          "price": 0.043615,
                             //          "side":"buy"
                             //      }
-                            if (_pairIsEnabled(order.pair)) {
+                            if (utils.pairIsEnabled(order.pair)) {
                                 let activePair = _.find(state.pairs, {pair: order.pair});
                                 let activePairIndex = _.findIndex(state.pairs, {pair: order.pair});
                                 if (!activePair) {
+                                    state.state = 'pending';
                                     let balance = _.find(balances, {pair: order.pair});
                                     if (balance) balance = balance.balance;
                                     activePair = {// Initialise the activePair with default state.
@@ -341,43 +348,9 @@ module.exports = (function () {
         });
     };
 
-    // `_stateHasChanged` checks to ensure that the state of the bot
-    // has changed. Retries every 3 seconds for up to 15 seconds.
-    let _stateHasChanged = (pair, stateTest) => {
-        let retry_interval = 1000 * 3; // 3 seconds
-        let hardStop = 5 * retry_interval; // 15 seconds
-        return new Promise((resolve, reject) => {
-            let __stateHasChanged = function (pair, stateTest) {
-                _getState().then(state => {
-                    let activePair = _.find(state.activePairs, {pair: pair});
-                    if (
-                        (state.state === 'active' && activePair.side === stateTest) || // 'There are active positions and the side of the positions matches the test state'
-                        (!activePair && stateTest === 'idle')) { // There are no active positions and the test state is 'idle'.
-                        logger.log('State changed to: ' + stateTest);
-                        resolve(state); // Resolve with the current state
-                    }
-                    else {
-                        if (hardStop > 0) { // If time still less than the hard stop
-                            setTimeout(() => {
-                                logger.log('Retrying state change: ' + stateTest);
-                                __stateHasChanged(pair, stateTest); // recursive call, try again
-                                hardStop -= retry_interval;// countdown
-                            }, retry_interval)
-                        }
-                        else {
-                            reject('Failed to change the state.');
-                        }
-                    }
-                }).catch((e) => {
-                    __stateHasChanged(pair, stateTest); // recursive call, try again
-                })
-            };
-            __stateHasChanged(pair, stateTest);
-        });
-    };
-
     // `_exit` Exits all active orders and trades
-    let _exitAll = () => {
+    let _exit = () => {
+        logger.log('exit');
         return new Promise((resolve, reject) => {
             let cancellations = [];
             _getState().then(state => {
@@ -390,7 +363,7 @@ module.exports = (function () {
                         activePairs.push(order.pair);
                     });
                 });
-                cancellations = _.uniq(activePairs).map(pair => { return _exit(pair) });
+                cancellations = _.uniq(activePairs).map(pair => { return _close(pair) });
                 if ( !cancellations.length ){
                     resolve('Bot is already idle');
                 }
@@ -401,46 +374,34 @@ module.exports = (function () {
         });
     };
 
-    // `_exit` Exits all active orders and trades for a given pair.
-    // Attempts to exit 5 times, each attempt with an updated price.
-    let _exit = (pair) => {
-        let retryCount = 5;
+    // `_close` Exits all active orders and trades for a given pair.
+    let _close = function (pair) {
+        logger.log('close: ' + pair);
         return new Promise((resolve, reject) => {
-            let __exit = () => {
-                if (retryCount){
-                    retryCount--;
-                    _getState().then(state => {
-                        let activePair = _.find(state.activePairs, {pair: pair});
-                        if (activePair) {
-                            let orders = activePair.orders.map(order => { // Cancel all active orders
-                                return _cancelOrder(order.id).catch(__exit);
-                            });
-                            let positions = activePair.positions.map(pos => {
-                                let side = pos.side === 'buy' ? 'sell' : 'buy';
-                                let amount = Math.abs(parseFloat(pos.amount)).toString();
-                                return _order(pair, side, amount).catch(__exit); // Place a cancellation order for each position, with the opposite side and the same amount.
-                            });
-                            let cancellations = positions.concat(orders); // Cancel both orders and positions
-                            Promise.all(cancellations).then(() => { // Once all orders and positions have been exited
-                                logger.log('Submitted exit orders. Now checking state.');
-                                _stateHasChanged(pair, 'idle').then(resolve).catch(__exit); // Ensure that the state has changed to idle.
-                            }).catch(__exit); // Retry if it fails.
-                        }
-                        else {
-                            resolve('No active positions for: ' + pair); // Resolve because bot was already idle for this pair
-                        }
-                    }).catch(__exit);
+            _getState().then(state => {
+                let activePair = _.find(state.activePairs, {pair: pair});
+                if (state.state === 'active' && activePair) {
+                    let orders = activePair.orders.map(order => { // Cancel all active orders
+                        return _cancelOrder(order.id);
+                    });
+                    let positions = activePair.positions.map(pos => {
+                        let side = pos.side === 'buy' ? 'sell' : 'buy';
+                        let amount = Math.abs(parseFloat(pos.amount)).toString();
+                        return _order(pair, side, amount); // Place a cancellation order for each position, with the opposite side and the same amount.
+                    });
+                    let cancellations = positions.concat(orders); // Cancel both orders and positions
+                    Promise.all(cancellations).then(resolve).catch(reject);
                 }
                 else {
-                    reject('too many failed exit attempts for: ' + pair);
+                    resolve('No active positions for ' + pair); // Resolve because bot was already idle for that pair
                 }
-            };
-            __exit();
+            }).catch(reject)
         });
     };
 
     // `_cancelOrder` Cancels an order with the given order_id;
     let _cancelOrder = (orderId) => {
+        logger.log('cancelOrder ' + orderId);
         return new Promise((resolve, reject) => {
             bitfinexRest.cancel_order(orderId.toString(), (err, res) => {
                 if (!err) {
@@ -448,106 +409,27 @@ module.exports = (function () {
                     resolve(res);
                 }
                 else {
-                    reject(err);
+                    reject('Couldn\'t cancel your order ' + orderId);
                 }
             });
         });
     };
 
-    // `_parseTradeArguments` Preps an object to place an order
-    //
-    //      {
-    //          "pair": "ETHBTC",
-    //          "price": 0.029201,
-    //          "amount": "0.30",
-    //          "exchangePairName": "ETHBTC",
-    //          "exchange": "bitfinex",
-    //          "side": "buy",
-    //          "type": "limit"
-    //      }
-    let _parseTradeArguments = (balances, pair, side, amount) => {
-        let res = {
-            data: {},
-            error: null
-        };
-        let sides = ['buy', 'sell'];
-        let price = side === 'buy' ? prices[pair].ask : prices[pair].bid;
-        let exchangePairName = exchangePairNames[pair];
-        let exchangeBalance = _.find(balances, {pair: pair}).balance;
-        if (!_.includes(sides, side)) {
-            res.error = 'No valid side provided';
-        }
-        else if (!_.includes(_.keys(exchangePairNames), pair) || !exchangePairName || !exchangePairName.length) {
-            res.error = 'No valid pair name provided';
-        }
-        else if (!_.isNumber(_.find(balances, {pair: pair}).balance)) {
-            res.error = 'No valid exchangeBalance provided';
-        }
-        else if (!_.isNumber(price) || !price) {
-            res.error = 'No valid price provided';
-        }
-        else {
-            res.data = {
-                pair,
-                price: price.toString(),
-                amount: ( amount || exchangeBalance ).toString(),
-                exchangePairName,
-                exchange: 'bitfinex',
-                side,
-                type: 'limit'
-            };
-        }
-        return res;
-    };
-
-    // `_trade` Decides the type of order to be placed, and then places it.
-    // Returns the next state.
-    let _trade = (pair, side) => {
-        return new Promise((resolve, reject) => {
-            _getState().then(state => {
-                let activePair = _.find(state.activePairs, {pair: pair});
-                let retryCount = 5; // Allows five failed attempts at the placing the order, taking a total of 5 x 30 seconds ( 2 and a half minutes total )
-                let orderPromise = () => {
-                    if (retryCount){
-                        retryCount --;
-                        return _order(pair, side);
-                    }
-                    else {
-                        reject('Too many failed attempts at placing a ' + pair + ' trade.');
-                    }
-                };
-                if (state.state === 'active' && activePair && activePair.side !== side) { // Swing trade - exit and then place new order
-                    _exit(pair).then(() => {
-                        orderPromise().then(() => { // Once the initial position has been exited, place the new order.
-                            _stateHasChanged(pair, side).then(resolve).catch(reject); // Check that the state has changed to the new side
-                        }).catch(orderPromise); // When it fails we attempt to place a trade using the same order promise. The asset price updates with each repetition.
-                    }).catch(reject); // When it fails we attempt to exit again using the same exit promise. The asset price updates with each repetition.
-                }
-                else if (state.state === 'idle') { // The state was previously idle
-                    orderPromise().then(() => { // Vanilla trade
-                        _stateHasChanged(pair, side).then(resolve).catch(reject); // Check that the state has changed to the new side
-                    }).catch(orderPromise); // When it fails we attempt to place a trade using the same order promise. The asset price updates with each repetition.
-                }
-                else if (state.state === 'active' && activePair && activePair.side === side) {// There is already an active position on the specified side for this pair.
-                    reject('There is already a ' + side + ' in place for ' + pair); // The sides are the same. No adding to a position for now.
-                }
-            })
-        })
-    };
-
     // `_order` Places an order to bitfinex.
+    // Orders should be succesfully sent and accepted every time, but they will not always fill
     let _order = (pair, side, amount) => {
+        logger.log('order ' + pair + ', ' + side + ', ' + amount);
         return new Promise((resolve, reject) => {
             _getBalances().then(balances => {
-                let tradeData = _parseTradeArguments(balances, pair, side, amount);
+                let tradeData = utils.parseTradeArguments(balances, pair, side, amount);
                 if (!tradeData.error) {
                     tradeData = tradeData.data;
-                    bitfinexRest.new_order(tradeData.exchangePairName, tradeData.amount, tradeData.price, tradeData.exchange, tradeData.side, tradeData.type, (err, data) => {// symbol, amount, price, exchange, side, type, is_hidden, postOnly, cb
+                    bitfinexRest.new_order(tradeData.exchangePairName, tradeData.amount, tradeData.price, tradeData.exchange, tradeData.side, tradeData.type, (err) => {// symbol, amount, price, exchange, side, type, is_hidden, postOnly, cb
                         if (!err) {
                             resolve();
                         }
                         else {
-                            reject(err);
+                            reject('Couldn\'t place a your order');
                         }
                     });
                 }
@@ -558,16 +440,197 @@ module.exports = (function () {
         });
     };
 
+    // `_swingTrade` Attempts to change state from buy to sell or vice versa.
+    // It is only possible to swing trade if there are no active orders and an active position.
+    let _swingTrade = (pair, side) => {
+        logger.log('swingTrade ' + ', ' + pair + ', ' + side);
+        return new Promise((resolve, reject) => {
+            _getState().then(state => {
+                let activePair = _.find(state.activePairs, {pair: pair});
+                let repeater = () => {
+                    utils.recursiveTry(_stateHasChanged, [pair, 'idle'], 'stateHasChanged', 5, 5).then(() => { // then poll for state change
+                        _openNewPosition(pair, side).then(resolve).catch(reject)
+                    }).catch(()=>{
+                        _resolvePendingOrders().then(repeater).catch(reject); // Repeat until the state successfully changes to idle. The
+                    })
+                };
+                if (state.state === 'active' && activePair && activePair.side !== side) { // Swing trade - exit and then place new order in new direction
+                    _close(pair).then(repeater).catch(reject);
+                }
+                else {
+                    reject('Cannot swing trade when bot ' + state.state);
+                }
+            }).catch(reject);
+        })
+    };
+
+    // `_openNewPosition` Places a trade if the bot had previously been idle.
+    let _openNewPosition = (pair, side, amount) => {
+        logger.log('openNewPosition ' + pair + ', ' + side + ', ' + amount);
+        return new Promise((resolve, reject) => {
+            let repeater = () => {
+                utils.recursiveTry(_stateHasChanged, [pair, side], 'stateHasChanged', 5, 5).then(resolve).catch(()=>{ // Poll for state change. Resolve pending orders again if it fails.
+                    _resolvePendingOrders().then(repeater).catch(reject); // Repeat until the state successfully changes to idle.
+                })
+            };
+            _getState().then(state => {
+                if (state.state === 'idle') { // The state was previously idle
+                    _order(pair, side, amount).then(repeater).catch(reject);
+                }
+                else {
+                    reject('Cannot open a new position when bot is ' + state.state);
+                }
+            }).catch(reject);
+        })
+    };
+
+    // `_resolvePendingOrders` Places cancels all active orders and places them again with a new price and amount if there was a partial fill.
+    let _resolvePendingOrders = () => {
+        logger.log('resolvePendingOrders');
+        return new Promise((resolve, reject) => {
+            _getState().then(state => {
+                if (state.state === 'pending') { // The state was previously pending
+                    let pendingPair = _.find(state.activePairs, aP => { return aP.orders.length === 1; });
+                    let order = pendingPair.orders[0]; // There should only ever be one order.
+                    _cancelOrder( order.id ).then(() => {
+                        _openNewPosition(order.pair, order.side, order.remaining_amount).then(resolve).catch(reject); // Updates the order price
+                    }).catch(reject);
+                }
+                else {
+                    reject('Cannot resolve pending orders when bot is ' + state.state);
+                }
+            }).catch(reject);
+        })
+    };
+
+    // `_trade` Decides the type of order to be placed, and then places it.
+    // Returns the next state.
+    let _trade = (pair, side, amount) => {
+        logger.log('trade ' + pair + ', ' + side);
+        return new Promise((resolve, reject) => {
+            _getState().then(state => {
+                let activePair = _.find(state.activePairs, {pair: pair});
+                if (state.state === 'active' && activePair && activePair.side !== side) { // Swing trade - exit and then place new order in new direction
+                    _swingTrade(pair, side).then(resolve).catch(reject);
+                }
+                else if (state.state === 'idle') { // The state was previously idle
+                    _openNewPosition(pair, side, amount).then(resolve).catch(reject);
+                }
+                else if (state.state === 'active' && activePair && activePair.side === side) {// There is already an active position on the specified side for this pair.
+                    reject('There is already a ' + side + ' in place for ' + pair); // The sides are the same. No adding to a position for now.
+                }
+                else if (state.state === 'pending'){
+                    reject('Cannot place trades when bot is ' + state.state);
+                }
+            }).catch(reject);
+        })
+    };
+
+    // `stateHasChanged` checks to ensure that the state of the bot
+    // has changed. Retries every 3 seconds for up to 15 seconds.
+    let _stateHasChanged = (pair, stateTest) => {
+        logger.log('stateHasChanged: ' + pair + ', ' + stateTest);
+        return new Promise((resolve, reject) => {
+            _getState().then(state => {
+                let activePair = _.find(state.activePairs, {pair: pair});
+                if (
+                    (state.state === 'active' && activePair.side === stateTest) || // 'There are active positions and the side of the positions matches the test state'
+                    (!activePair && stateTest === 'idle')) { // There are no active positions and the test state is 'idle'.
+                    resolve(state); // Resolve with the current state
+                }
+                else {
+                    reject('Failed to change the state.');
+                }
+            }).catch(reject)
+        });
+    };
+
+    let utils = {
+        // `recursiveTry` Is a helper function used to attempt a function the noOfAttempts is exceeded.
+        recursiveTry: (attemptFunction, args, name, noOfAttempts, delay) => {
+            return new Promise((resolve, reject) => {
+                delay = _.isNumber(delay) ? delay : 0; // Default delay is 0
+                let retryCount = noOfAttempts || 5; // Allows five failed attempts at executing the attemptFunction
+                let newAttempt = () => {
+                    attemptFunction.apply(this, args).then(resolve).catch(tryAgain);
+                };
+                let tryAgain = () => {
+                    logger.log('recursiveTry (' + retryCount + ') ' + name + ', ' + JSON.stringify(args));
+                    retryCount--;
+                    if (retryCount) {
+                        setTimeout(newAttempt, delay * 1000);
+                    }
+                    else {
+                        reject('Failed ' + name + ' ' + retryCount + ' times.');
+                    }
+                };
+                tryAgain(); // Try for the first time.
+            });
+        },
+        // `parseTradeArguments` Preps an object to place an order
+        //
+        //      {
+        //          "pair": "ETHBTC",
+        //          "price": 0.029201,
+        //          "amount": "0.30",
+        //          "exchangePairName": "ETHBTC",
+        //          "exchange": "bitfinex",
+        //          "side": "buy",
+        //          "type": "limit"
+        //      }
+        parseTradeArguments: (balances, pair, side, amount) => {
+            logger.log('parseTradeArguments ' + JSON.stringify(balances) + ', ' + pair + ', ' + side + ', ' + amount);
+            let res = {
+                data: {},
+                error: null
+            };
+            let sides = ['buy', 'sell'];
+            let price = side === 'buy' ? prices[pair].ask : prices[pair].bid;
+            let exchangePairName = exchangePairNames[pair];
+            let exchangeBalance = _.find(balances, {pair: pair}).balance;
+            if (!_.includes(sides, side)) {
+                res.error = 'No valid side provided';
+            }
+            else if (!_.includes(_.keys(exchangePairNames), pair) || !exchangePairName || !exchangePairName.length) {
+                res.error = 'No valid pair name provided';
+            }
+            else if (!_.isNumber(_.find(balances, {pair: pair}).balance)) {
+                res.error = 'No valid exchangeBalance provided';
+            }
+            else if (!_.isNumber(price) || !price) {
+                res.error = 'No valid price provided';
+            }
+            else {
+                res.data = {
+                    pair,
+                    price: price.toString(),
+                    amount: ( amount || exchangeBalance ).toString(),
+                    exchangePairName,
+                    exchange: 'bitfinex',
+                    side,
+                    type: 'limit'
+                };
+            }
+            return res;
+        },
+        // `pairIsEnabled` is used to determine
+        // which pairs were initialised during setup
+        pairIsEnabled: pair => {
+            return !!_.invert(exchangePairNames)[pair];
+        }
+    };
+
     // Exposed public functions
     return {
         init: _init,
+        close: _close,
         exit: _exit,
-        exitAll: _exitAll,
         trade: _trade,
         order: _order,
         getState: _getState,
         getBalances: _getBalances,
         getActiveOrders: _getActiveOrders,
         getActivePositions: _getActivePositions,
+        resolvePendingOrders: _resolvePendingOrders
     };
 })();

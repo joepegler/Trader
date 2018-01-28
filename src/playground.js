@@ -4,7 +4,6 @@ module.exports = (function() {
 
     const prompt = require('prompt');
     const exchange = require('./exchanges/bitfinex');
-    const telegram = require('./utils/telegram');
 
     prompt.start();
 
@@ -14,44 +13,39 @@ module.exports = (function() {
 
     (function getIntput(result){
 
-        let exit = (e) => {
-            console.error(e);
-            process.exit();
-        };
-
-        if(result) console.log(result);
-        console.log(`Pick an action: [b]alances, [buy], [sell], [e]xit, e[x]it all, [s]tate, [o]rders, [p]ositions, [t]elegram`);
+        if(result) console.log('***********************************\n' + JSON.stringify(result, null, 2) + '\n***********************************');
+        console.log(`Pick an action: [b]alances, [buy], [sell], [c]lose, [e]xit, [s]tate, [o]rders, [p]ositions, [r]esolve`);
 
         // Get user input
         prompt.get(['action'], function (err, res) {
             if(!err && res.action){
                 switch( res.action ){
                     case 'b':
-                        exchange.getBalances().then(getIntput).catch(exit);
+                        exchange.getBalances().then(getIntput).catch(getIntput);
                         break;
                     case 'buy':
-                        exchange.trade('ETHBTC', 'buy').then(getIntput).catch(exit);
+                        exchange.trade('ETHBTC', 'buy', '0.02').then(getIntput).catch(getIntput);
                         break;
                     case 'sell':
-                        exchange.trade('ETHBTC', 'sell').then(getIntput).catch(exit);
+                        exchange.trade('ETHBTC', 'sell', '0.02').then(getIntput).catch(getIntput);
+                        break;
+                    case 'c':
+                        exchange.close('ETHBTC').then(getIntput).catch(getIntput);
                         break;
                     case 'e':
-                        exchange.exit('ETHBTC').then(getIntput).catch(exit);
-                        break;
-                    case 'x':
-                        exchange.exitAll().then(getIntput).catch(exit);
+                        exchange.exit().then(getIntput).catch(getIntput);
                         break;
                     case 's':
-                        exchange.getState().then(getIntput).catch(exit);
+                        exchange.getState().then(getIntput).catch(getIntput);
                         break;
                     case 'o':
-                        exchange.getActiveOrders().then(getIntput).catch(exit);
+                        exchange.getActiveOrders().then(getIntput).catch(getIntput);
                         break;
                     case 'p':
-                        exchange.getActivePositions().then(getIntput).catch(exit);
+                        exchange.getActivePositions().then(getIntput).catch(getIntput);
                         break;
-                    case 't':
-                        telegram.init(exchange).then(getIntput).catch(exit);
+                    case 'r':
+                        exchange.resolvePendingOrders().then(getIntput).catch(getIntput);
                         break;
                     default:
                         getIntput('Wrong selection');

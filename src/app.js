@@ -61,13 +61,13 @@ module.exports = (function() {
                     res.status(500).send(err);
                 });
         })
-        .post('/exit', function(req, res) {
+        .post('/close', function(req, res) {
 
-            // Exits any open position by pair
+            // closes any open position by pair
             let pair = req.body.pair.toUpperCase();
 
             exchange
-                .exit(pair)
+                .close(pair)
                 .then( status => { res.status(200).send(status); })
                 .catch(err => {
                     logger.error(err);
