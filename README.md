@@ -7,7 +7,7 @@
     - `mv exchanges/config-example.js exchanges/config.js`
 - There are 3 further useful npm commands:
     - `npm run play` - Runs the playground.js file with a set of quickfire actions you can use to interact with bitfinex.
-        - <b>[b]alances</b> - Gets the available balance quoted in all of the supported pairs
+        - **[b]alances** - Gets the available balance quoted in all of the supported pairs
             ```
             [
                 {
@@ -17,11 +17,11 @@
                 }
             ]
             ```
-        - <b>[buy]</b> - Places a margin long trade on the ETHBTC pair worth 0.02 ETH at the price of the lowest ask. Returns the current state
-        - <b>[sell]</b> - Places a margin short trade on the ETHBTC pair worth 0.02 ETH at the price of the highest bid. Returns the current state
-        - <b>[c]lose</b> - Closes an open ETHBTC position
-        - <b>[e]xit</b> - Closes all open positions and orders
-        - <b>[s]tate</b> - Gets the current state of the bot
+        - **[buy]** - Places a margin long trade on the ETHBTC pair worth 0.02 ETH at the price of the lowest ask. Returns the current state
+        - **[sell]** - Places a margin short trade on the ETHBTC pair worth 0.02 ETH at the price of the highest bid. Returns the current state
+        - **[c]lose** - Closes an open ETHBTC position
+        - **[e]xit** - Closes all open positions and orders
+        - **[s]tate** - Gets the current state of the bot
             ```
             state = {
                 "state": "active",
@@ -39,7 +39,7 @@
                 }]
             }
             ```
-        - <b>[o]rders</b> - Gets all open orders
+        - **[o]rders** - Gets all open orders
             ```
             [{
                  "id":5243424763,
@@ -49,7 +49,7 @@
                  "remaining_amount": .565
             }]            
             ```
-        - <b>[p]ositions</b> - Gets all open positions
+        - **[p]ositions** - Gets all open positions
             ```
             [{
                 "id": "134514333",
@@ -60,7 +60,7 @@
                 "side": "buy"
             }]
             ```
-        - <b>[r]esolve pending orders</b> - Recursively attempts to re-submit any unfilled open orders
+        - **[r]esolve pending orders** - Recursively attempts to re-submit any unfilled open orders
     - `npm start` - Runs the trader with the local endpoint: [http://localhost:8000](http://localhost:8000). This can receive http requests from [this postman project](https://www.getpostman.com/collections/d3ff660f287183be472e) to send actions to the bitfinex bot. A description of the API can be found [here.](https://documenter.getpostman.com/view/877346/swingtrader-local/7TNgXfx)
     - `npm run docs` - Generates code documentation as a static html page.
 
