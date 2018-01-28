@@ -32,8 +32,8 @@
             "pair": "ETHBTC",
             "balance": 0.13802080706832412,
             "side": "buy",
-            "positions": <POSITIONS>,
-            "orders": 
+            "positions": [],
+            "orders": []
         }]
     }
 ```
