@@ -22,43 +22,43 @@
         - **[c]lose** - Closes an open ETHBTC position
         - **[e]xit** - Closes all open positions and orders
         - **[s]tate** - Gets the current state of the bot
-            ```
-            state = {
-                "state": "active",
-                "balances": [{
-                    "pair": "ETHBTC",
-                    "balance": 0.13802080706832412,
-                    "tradeable": 0.3130893379539062
-                }],
-                "activePairs": [{
-                    "pair": "ETHBTC",
-                    "balance": 0.13802080706832412,
-                    "side": "buy",
-                    "positions": <POSITIONS>,
-                    "orders": 
-                }]
-            }
+            ```javascript
+                state = {
+                    "state": "active",
+                    "balances": [{
+                        "pair": "ETHBTC",
+                        "balance": 0.13802080706832412,
+                        "tradeable": 0.3130893379539062
+                    }],
+                    "activePairs": [{
+                        "pair": "ETHBTC",
+                        "balance": 0.13802080706832412,
+                        "side": "buy",
+                        "positions": <POSITIONS>,
+                        "orders": 
+                    }]
+                }
             ```
         - **[o]rders** - Gets all open orders
-            ```
-            [{
-                 "id":5243424763,
-                 "pair":"ETHBTC",
-                 "price": 0.043615,
-                 "side":"buy",
-                 "remaining_amount": .565
-            }]            
+            ```javascript
+                [{
+                     "id":5243424763,
+                     "pair":"ETHBTC",
+                     "price": 0.043615,
+                     "side":"buy",
+                     "remaining_amount": .565
+                }]            
             ```
         - **[p]ositions** - Gets all open positions
-            ```
-            [{
-                "id": "134514333",
-                "pair": "ETHBTC",
-                "base": 0.089331,
-                "amount": 0.13875501,
-                "profit": -0.00001565073259794,
-                "side": "buy"
-            }]
+            ```javascript
+                [{
+                    "id": "134514333",
+                    "pair": "ETHBTC",
+                    "base": 0.089331,
+                    "amount": 0.13875501,
+                    "profit": -0.00001565073259794,
+                    "side": "buy"
+                }]
             ```
         - **[r]esolve pending orders** - Recursively attempts to re-submit any unfilled open orders
     - `npm start` - Runs the trader with the local endpoint: [http://localhost:8000](http://localhost:8000). This can receive http requests from [this postman project](https://www.getpostman.com/collections/d3ff660f287183be472e) to send actions to the bitfinex bot. A description of the API can be found [here.](https://documenter.getpostman.com/view/877346/swingtrader-local/7TNgXfx)
