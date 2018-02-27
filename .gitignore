@@ -2,3 +2,4 @@ node_modules
 .idea
 logfile.txt
 exchanges/config.js
+src/www/docs

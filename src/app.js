@@ -3,7 +3,7 @@ module.exports = (function() {
     "use strict";
 
     const exchange = require('./exchanges/bitfinex'),
-        logger = require('./utils/logger'),
+        logger = require('./tools/logger'),
         express = require('express'),
         app = express(),
         bodyParser = require('body-parser'),
@@ -29,36 +29,39 @@ module.exports = (function() {
             }
             else {
                 logger.error('Authentication failure: ' + req.headers.auth_key.toString());
-                res.status(401).send('Authentication fail');
+                res.status(401).send({error: 'Authentication fail'});
             }
         })
         .post('/sell', function(req, res) {
 
             // Short sell a pair
             let pair = req.body.pair.toUpperCase();
+            let amount = req.body.amount.toUpperCase();
+
             exchange
-                .trade(pair, 'sell')
+                .trade(pair, 'sell', amount)
                 .then( status => {
                     res.status(200).send(status);
                 })
                 .catch(err => {
                     logger.error(err);
-                    res.status(500).send(err);
+                    res.status(500).send({error: err});
                 });
         })
         .post('/buy', function(req, res) {
 
             // Margin buys a pair
             let pair = req.body.pair.toUpperCase();
+            let amount = req.body.amount.toUpperCase();
 
             exchange
-                .trade(pair, 'buy')
+                .trade(pair, 'buy', amount)
                 .then( status => {
                     res.status(200).send(status);
                 })
                 .catch(err => {
-                    logger.error( err );
-                    res.status(500).send(err);
+                    logger.error(err);
+                    res.status(500).send({error: err});
                 });
         })
         .post('/close', function(req, res) {
@@ -71,7 +74,7 @@ module.exports = (function() {
                 .then( status => { res.status(200).send(status); })
                 .catch(err => {
                     logger.error(err);
-                    res.status(500).send(err);
+                    res.status(500).send({error: err});
                 });
         })
         .get('/state', function(req, res) {
@@ -84,7 +87,7 @@ module.exports = (function() {
                 })
                 .catch(err => {
                     logger.error(err);
-                    res.status(500).send(err);
+                    res.status(500).send({error: err});
                 });
         });
 })();

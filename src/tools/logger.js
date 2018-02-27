@@ -4,12 +4,14 @@ module.exports = (function() {
     const moment = require('moment');
     const fs = require('fs');
     const telegram = require('./telegram');
+    let io;
 
     const logger = {
-        init: exchange => {
-            telegram.init(exchange);
+        init: (exchange, _io) => {
+            io = _io;
+            telegram.init(exchange); // this enables sending commands to bot from within telegram.
         },
-        log: (messageOne, messageTwo) => {
+        log: (messageOne, messageTwo, important) => {
             let msg = '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + '] ';
             if (typeof messageOne === 'object') {
                 msg += JSON.stringify(messageOne, null, 2);
@@ -19,8 +21,9 @@ module.exports = (function() {
             }
             fs.appendFileSync('./logfile.txt', msg);
             msg = msg.replace('\n', '');
-            telegram.sendMessage(msg);
+            important && telegram.sendMessage(msg);
             console.log(msg);
+            io && io.emit('message', msg);
             if (messageTwo) logger.log(messageTwo);
         },
         error: (errorOne, errorTwo) => {
@@ -40,6 +43,7 @@ module.exports = (function() {
             msg = msg.replace('\n', '');
             telegram.sendMessage(msg);
             console.error(msg);
+            io && io.emit('message', msg);
             if (errorTwo) logger.err(errorTwo);
         },
     };

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Trader UI</title>
+
+        <link href='http://fonts.googleapis.com/css?family=Khula:700|Montserrat:500' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" href="style/main.css">
+
+    </head>
+    <body onload="init()">
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+
+        <section>
+
+            <h1 style="text-align: center; font-size: 35px;">Trader</h1>
+            <div class='console scroll'><span id='text'></span></div>
+
+            <div class="buttons">
+                <button id="state">State</button>
+                <button id="balance">Balance</button>
+                <button id="close">Close</button>
+                <button id="exit">Exit</button>
+                <button id="orders">Orders</button>
+                <button id="positions">Positions</button>
+                <button id="repair">Repair</button>
+                <button id="buy">Buy</button>
+                <button id="sell">Sell</button>
+            </div>
+
+            <div class="description">
+                <span id="desc-state">Gets the current state of the bot</span>
+                <span id="desc-balance">Gets the available balance quoted in all of the supported pairs</span>
+                <span id="desc-close">Closes an open position</span>
+                <span id="desc-exit">Closes all open positions and orders</span>
+                <span id="desc-orders">Gets all open orders</span>
+                <span id="desc-positions">Gets all open positions</span>
+                <span id="desc-repair">Recursively attempts to re-submit any unfilled open orders</span>
+                <span id="desc-buy">Places a margin long trade on the ETHBTC pair worth 0.02 ETH at the price of the lowest ask. Returns the current state</span>
+                <span id="desc-sell">Places a margin short trade on the ETHBTC pair worth 0.02 ETH at the price of the highest bid. Returns the current state</span>
+            </div>
+
+            <div style="text-align: center; width: 100%;">
+                <a href="./docs/src/exchanges/bitfinex.html">Code Documentation</a>
+            </div>
+
+        </section>
+
+        <script src="js/main.js"></script>
+
+    </body>
+</html>

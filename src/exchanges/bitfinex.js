@@ -9,7 +9,7 @@ module.exports = (function () {
 
     // Local imports
     const configKeys = require('./config');
-    const logger = require('../utils/logger');
+    const logger = require('../tools/logger');
 
     // Configure imports
     const bitfinexRest = new BFX(configKeys.rest.key, configKeys.rest.secret, {version: 1, transform: true}).rest;
@@ -368,7 +368,9 @@ module.exports = (function () {
                     resolve('Bot is already idle');
                 }
                 else {
-                    Promise.all(cancellations).then(resolve).catch(reject);
+                    Promise.all(cancellations).then(closeResponseArray => {
+                        resolve('Closed ' + cancellations.length + ' positions and orders.');
+                    }).catch(reject);
                 }
             }).catch(reject);
         });
@@ -426,10 +428,10 @@ module.exports = (function () {
                     tradeData = tradeData.data;
                     bitfinexRest.new_order(tradeData.exchangePairName, tradeData.amount, tradeData.price, tradeData.exchange, tradeData.side, tradeData.type, (err) => {// symbol, amount, price, exchange, side, type, is_hidden, postOnly, cb
                         if (!err) {
-                            resolve();
+                            resolve('Successfully placed a ' + tradeData.pair + ' ' + tradeData.side + ' order for ' + tradeData.amount + ' at a price of ' + tradeData.price);
                         }
                         else {
-                            reject('Couldn\'t place a your order');
+                            reject('Couldn\'t place a your order: ' + err);
                         }
                     });
                 }
@@ -447,9 +449,10 @@ module.exports = (function () {
         return new Promise((resolve, reject) => {
             _getState().then(state => {
                 let activePair = _.find(state.activePairs, {pair: pair});
+                let amount = Math.abs(parseFloat(activePair.positions[0].amount)).toString();
                 let repeater = () => {
                     utils.recursiveTry(_stateHasChanged, [pair, 'idle'], 'stateHasChanged', 5, 5).then(() => { // then poll for state change
-                        _openNewPosition(pair, side).then(resolve).catch(reject)
+                        _openNewPosition(pair, side, amount).then(resolve).catch(reject)
                     }).catch(()=>{
                         _resolvePendingOrders().then(repeater).catch(reject); // Repeat until the state successfully changes to idle. The
                     })
@@ -506,7 +509,7 @@ module.exports = (function () {
     // `_trade` Decides the type of order to be placed, and then places it.
     // Returns the next state.
     let _trade = (pair, side, amount) => {
-        logger.log('trade ' + pair + ', ' + side);
+        logger.log('trade ' + pair + ', ' + side + ',' + amount);
         return new Promise((resolve, reject) => {
             _getState().then(state => {
                 let activePair = _.find(state.activePairs, {pair: pair});
@@ -536,6 +539,7 @@ module.exports = (function () {
                 if (
                     (state.state === 'active' && activePair.side === stateTest) || // 'There are active positions and the side of the positions matches the test state'
                     (!activePair && stateTest === 'idle')) { // There are no active positions and the test state is 'idle'.
+                    logger.log(JSON.stringify(state, null, 2), null, true);
                     resolve(state); // Resolve with the current state
                 }
                 else {
@@ -546,7 +550,7 @@ module.exports = (function () {
     };
 
     let utils = {
-        // `recursiveTry` Is a helper function used to attempt a function the noOfAttempts is exceeded.
+        // `recursiveTry` is a helper function used to attempt a function the noOfAttempts is exceeded.
         recursiveTry: (attemptFunction, args, name, noOfAttempts, delay) => {
             return new Promise((resolve, reject) => {
                 delay = _.isNumber(delay) ? delay : 0; // Default delay is 0

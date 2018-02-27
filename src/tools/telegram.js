@@ -18,7 +18,6 @@ module.exports = (function() {
                 bot.on("text", (message) => {
                     if (id === message.chat.id) {
                         let command = message.text.slice(0, message.text.indexOf("@")).substring(1);
-
                         switch(command){
                             case 'buy':
                                 exchange.trade('ETHBTC', 'buy').then(respond).catch(respond);
