@@ -1,5 +1,5 @@
 node_modules
 .idea
-logfile.txt
-exchanges/config.js
+log.txt
+config.js
 src/www/docs

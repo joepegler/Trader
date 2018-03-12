@@ -2,14 +2,19 @@ module.exports = (function() {
     "use strict";
 
     const moment = require('moment');
+    const Promise = require('promise');
     const fs = require('fs');
-    const telegram = require('./telegram');
-    let io;
+
+    let io, textFile, telegram;
 
     const logger = {
-        init: (exchange, _io) => {
-            io = _io;
-            telegram.init(exchange); // this enables sending commands to bot from within telegram.
+        init: (_io, txtFile, tlgrm) => {
+            return new Promise((resolve) => {
+                io = _io;
+                textFile = txtFile;
+                telegram = tlgrm;
+                resolve('Initiated logger');
+            });
         },
         log: (messageOne, messageTwo, important) => {
             let msg = '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + '] ';
@@ -19,12 +24,12 @@ module.exports = (function() {
             else {
                 msg += messageOne;
             }
-            fs.appendFileSync('./logfile.txt', msg);
+            textFile && fs.appendFileSync('./' + textFile + '.txt', msg);
             msg = msg.replace('\n', '');
-            important && telegram.sendMessage(msg);
+            important && telegram && telegram.sendMessage(msg);
             console.log(msg);
             io && io.emit('message', msg);
-            if (messageTwo) logger.log(messageTwo);
+            if (messageTwo) logger.log(messageTwo, null, important);
         },
         error: (errorOne, errorTwo) => {
             let msg = '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + '] ERROR - ';
@@ -39,9 +44,9 @@ module.exports = (function() {
             else {
                 msg += errorOne;
             }
-            fs.appendFileSync('./logfile.txt', msg);
+            textFile && fs.appendFileSync('./' + textFile + '.txt', msg);
             msg = msg.replace('\n', '');
-            telegram.sendMessage(msg);
+            telegram && telegram.sendMessage(msg);
             console.error(msg);
             io && io.emit('message', msg);
             if (errorTwo) logger.err(errorTwo);

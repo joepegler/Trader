@@ -7,17 +7,7 @@ module.exports = (function () {
     const _ = require('lodash');
     const BFX = require('bitfinex-api-node');
 
-    // Local imports
-    const configKeys = require('./config');
-    const logger = require('../tools/logger');
-
     // Configure imports
-    const bitfinexRest = new BFX(configKeys.rest.key, configKeys.rest.secret, {version: 1, transform: true}).rest;
-    const bitfinexWebsocket = new BFX(configKeys.websocket.key, configKeys.websocket.secret, {
-        version: 2,
-        transform: true
-    }).ws;
-
     // Local variables
     let usdPrices = {};
     let prices = {};
@@ -29,13 +19,19 @@ module.exports = (function () {
         XMRBTC: 'XMRBTC',
         DSHBTC: 'DSHBTC'
     };
+    let bitfinexRest, bitfinexWebsocket, logger;
 
     // Functions
     // ----------------
     // `_init` Initiates the price ticker and retrieves the current account balance
-    let _init = (pairs) => {
-        logger.log('init');
-        return new Promise((resolve, reject) => {
+    let _init = (pairs, configKeys, _logger) => {
+        return new Promise((resolve) => {
+
+            logger = _logger;
+
+            bitfinexRest = new BFX(configKeys.rest.key, configKeys.rest.secret, {version: 1, transform: true}).rest;
+            bitfinexWebsocket = new BFX(configKeys.websocket.key, configKeys.websocket.secret, { version: 2, transform: true }).ws;
+
             exchangePairNames = _.pickBy(exchangePairNames, function (coinVal, coinName) { // exchangePairNames needs to be filtered by the 'pairs' argument
                 return _.includes(pairs, coinName)
             });
@@ -44,6 +40,27 @@ module.exports = (function () {
                 bitfinexWebsocket.auth(); // Authenticate once the websocket has been opened.
             });
             bitfinexWebsocket.on('error', logger.error); // When the websocket errs
+
+            bitfinexWebsocket.on('message', (data) => {
+                if (data[1] === "tu"){
+                    let tradeArr = data[2];
+                    let trade = {
+                        id: tradeArr[0],
+                        pair: tradeArr[1].substring(1).toUpperCase(),
+                        ts: tradeArr[2],
+                        order_id: tradeArr[3],
+                        amount: tradeArr[4],
+                        price: tradeArr[5],
+                        type: tradeArr[6],
+                        order_price: tradeArr[7],
+                        maker: tradeArr[8],
+                        fee: tradeArr[9],
+                        fee_currency: tradeArr[10],
+                    };
+                    console.log('Message: ' + JSON.stringify(trade, null, 2));
+                }
+            });
+
             bitfinexWebsocket.on('auth', () => {
                 let foundPrice = false; // Only resolve once price has been found.
                 _.each(exchangePairNames, pair => { // Loop the exchange coin names and subscribe to each of the pairs
