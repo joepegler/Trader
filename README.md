@@ -5,9 +5,10 @@
 - Once installed get the required dependencies with the command: `npm i`
 - There is a configuration file that needs to be renamed and supplied with the bitfinex secret/key:
     - `mv src/config-example.js src/exchanges/config.js`
-    - `npm start` - Runs the trader with the local endpoint: [http://localhost:8000](http://localhost:8000). This can receive http requests from [this postman project](https://www.getpostman.com/collections/d3ff660f287183be472e) to send actions to bitfinex. A description of the API can be found [here.](https://documenter.getpostman.com/view/877346/swingtrader-local/7TNgXfx)
+    - `npm start ui` - Runs the trader with a ui controller on port 8882: [http://localhost:8882](http://localhost:8002).
+    - `npm start dev` - Runs the trader with commands availble from the terminal
+    - `npm start` - Runs the trader with the endpoint: [http://localhost:8000](http://localhost:8000). This can receive http requests from [this postman project](https://www.getpostman.com/collections/d3ff660f287183be472e) to send actions to bitfinex. A description of the API can be found [here.](https://documenter.getpostman.com/view/877346/swingtrader-local/7TNgXfx)
     - `npm run docs` - Generates code documentation as a static html page.
-    - `npm run play` - Runs the playground.js file with a set of quickfire actions you can use to interact with bitfinex.
 ### Commands    
 - **[b]alances** - Gets the available balance quoted in all of the supported pairs
 ```javascript

@@ -21,7 +21,6 @@ module.exports = (function() {
         if(process.argv[2] === 'ui'){
             initIo()
                 .then()
-                .then(initTelegram)
                 .then(initLogger)
                 .then(initExchange)
                 .then(initToolkit)
@@ -32,7 +31,6 @@ module.exports = (function() {
         else if(process.argv[2] === 'dev') {
             initIo()
                 .then()
-                .then(initTelegram)
                 .then(initLogger)
                 .then(initExchange)
                 .then(initToolkit)
