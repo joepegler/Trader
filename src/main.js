@@ -5,7 +5,8 @@ module.exports = (function() {
     const Promise   = require('promise');
     const app       = express();
 
-    let config, features = {
+    let config = require('./config');
+    let features = {
         server:     null,
         io:         null,
         telegram:   null,
@@ -15,12 +16,42 @@ module.exports = (function() {
         toolkit:    null
     };
 
-    function init(){
-        return new Promise((resolve) => {
-            config = require('./config');
-            resolve('Initiated main');
-        });
-    }
+    (function init(){
+
+        if(process.argv[2] === 'ui'){
+            initIo()
+                .then()
+                .then(initTelegram)
+                .then(initLogger)
+                .then(initExchange)
+                .then(initToolkit)
+                .then(initUi)
+                .then(console.log)
+                .catch(console.error)
+        }
+        else if(process.argv[2] === 'dev') {
+            initIo()
+                .then()
+                .then(initTelegram)
+                .then(initLogger)
+                .then(initExchange)
+                .then(initToolkit)
+                .then(initTerminal)
+                .then(console.log)
+                .catch(console.error)
+        }
+        else {
+            initIo()
+                .then()
+                .then(initTelegram)
+                .then(initLogger)
+                .then(initExchange)
+                .then(initApi)
+                .then(console.log)
+                .catch(console.error)
+        }
+
+    })();
 
     function initIo(){
         return new Promise((resolve) => {
@@ -96,7 +127,7 @@ module.exports = (function() {
     function initApi(){
         console.info('initApi');
         return new Promise((resolve, reject) => {
-            let apiOpts = config.exchange;
+            let apiOpts = config.api;
             if (apiOpts) {
                 let port = apiOpts.port;
                 let authToken = apiOpts.authToken;
@@ -134,17 +165,5 @@ module.exports = (function() {
             features.terminal.init(features.exchange, features.logger, features.toolkit).then(resolve).catch(reject);
         })
     }
-
-    init()
-        .then(initIo)
-        .then(initTelegram)
-        .then(initLogger)
-        .then(initExchange)
-        .then(initToolkit)
-        // .then(initApi)
-        .then(initUi)
-        // .then(initTerminal)
-        .then(console.log)
-        .catch(console.error)
 
 }());
