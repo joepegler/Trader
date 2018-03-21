@@ -58,7 +58,7 @@ module.exports = (function () {
                         fee: tradeArr[9],
                         fee_currency: tradeArr[10],
                     };
-                    console.log('Message: ' + JSON.stringify(trade, null, 2));
+                    logger.log('[TRADE]', trade, true);
                 }
             });
 
@@ -449,7 +449,7 @@ module.exports = (function () {
                             resolve('Successfully placed a ' + tradeData.pair + ' ' + tradeData.side + ' order for ' + tradeData.amount + ' at a price of ' + tradeData.price + (tradeData.maker ? ' as maker' : ' as taker'));
                         }
                         else {
-                            reject('Couldn\'t place a your order: ', err);
+                            reject('Couldn\'t place your order: ', err);
                         }
                     });
                 }
@@ -494,7 +494,8 @@ module.exports = (function () {
                 })
             };
             _getState().then(state => {
-                if (state.state === 'idle') { // The state was previously idle
+                let activePair = _.find(state.activePairs, {pair: pair});
+                if (state.state === 'idle' || (state.state === 'active' && !activePair )) { // The state was previously idle
                     _order(pair, side, amount, maker).then(repeater).catch(reject);
                 }
                 else {
@@ -534,7 +535,7 @@ module.exports = (function () {
                 if (state.state === 'active' && activePair && activePair.side !== side) { // Swing trade - exit and then place new order in new direction
                     _swingTrade(pair, side).then(resolve).catch(reject);
                 }
-                else if (state.state === 'idle') { // The state was previously idle
+                else if (state.state === 'idle' || (state.state === 'active' && !activePair )) { // The state was previously idle or it's active but only for a different pair
                     _openNewPosition(pair, side, amount).then(resolve).catch(reject);
                 }
                 else if (state.state === 'active' && activePair && activePair.side === side) {// There is already an active position on the specified side for this pair.
