@@ -3,6 +3,7 @@ module.exports = (function() {
     "use strict";
 
     const Promise       = require('promise');
+    const _             = require('lodash');
     const bodyParser    = require('body-parser');
 
     let authToken, exchange, logger, app;
@@ -39,46 +40,70 @@ module.exports = (function() {
 
                 // Short sell a pair
                 let pair = req.body.pair.toUpperCase();
-                let amount = req.body.amount.toUpperCase();
+                let amount = req.body.amount;
 
-                exchange
-                    .trade(pair, 'sell', amount)
-                    .then( status => {
-                        res.status(200).send(status);
-                    })
-                    .catch(err => {
-                        logger.error(err);
-                        res.status(500).send({error: err});
-                    });
+                if (pair && amount){
+                    res.status(200).send({data: 'submitted sell order for ' + amount + ' ' + pair});
+                    exchange
+                        .trade(pair, 'sell', amount)
+                        .then(logger.log)
+                        .catch(logger.error);
+                }
+                else {
+                    res.status(500).send({error: 'Missing parameter'})
+                }
+
             })
             .post('/buy', function(req, res) {
 
                 // Margin buys a pair
                 let pair = req.body.pair.toUpperCase();
-                let amount = req.body.amount.toUpperCase();
+                let amount = req.body.amount;
 
-                exchange
-                    .trade(pair, 'buy', amount)
-                    .then( status => {
-                        res.status(200).send(status);
-                    })
-                    .catch(err => {
-                        logger.error(err);
-                        res.status(500).send({error: err});
-                    });
+                if (pair && amount){
+                    res.status(200).send({data: 'submitted buy order for ' + amount + ' ' + pair});
+                    exchange
+                        .trade(pair, 'buy', amount)
+                        .then(logger.log)
+                        .catch(logger.error);
+                }
+                else {
+                    res.status(500).send({error: 'Missing parameter'})
+                }
+
             })
             .post('/close', function(req, res) {
 
                 // closes any open position by pair
                 let pair = req.body.pair.toUpperCase();
+                if (pair) {
+                    exchange
+                        .close(pair)
+                        .then(logger.log)
+                        .catch(logger.error);
 
-                exchange
-                    .close(pair)
-                    .then( status => { res.status(200).send(status); })
-                    .catch(err => {
-                        logger.error(err);
-                        res.status(500).send({error: err});
-                    });
+                    res.status(200).send({data: 'submitted close order for ' + pair});
+                }
+                else {
+                    res.status(500).send({error: 'Missing parameter'})
+                }
+            })
+            .post('/resolve', function(req, res) {
+
+                // resolves open orders
+                let pair = req.body.pair.toUpperCase();
+                if (pair) {
+
+                    exchange
+                        .resolvePendingOrders(pair)
+                        .then(logger.log)
+                        .catch(logger.error);
+
+                    res.status(200).send({data: 'attempting to resolve unfilled orders for ' + pair});
+                }
+                else {
+                    res.status(500).send({error: 'Missing parameter'})
+                }
             })
             .get('/state', function(req, res) {
 

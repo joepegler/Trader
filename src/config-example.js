@@ -23,7 +23,8 @@ module.exports = {
                 }
             }
         },
-        enabledPairs: ['ETHBTC', 'BTCUSD', 'LTCBTC', 'XRPBTC', 'XMRBTC', 'DSHBTC']
+        enabledPairs: ['ETHBTC', 'BTCUSD', 'LTCBTC', 'XRPBTC', 'XMRBTC', 'DSHBTC'],
+        asMaker: true
     },
     api: {
         port: 0,

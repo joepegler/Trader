@@ -19,15 +19,16 @@ module.exports = (function () {
         XMRBTC: 'XMRBTC',
         DSHBTC: 'DSHBTC'
     };
-    let bitfinexRest, bitfinexWebsocket, logger;
+    let bitfinexRest, bitfinexWebsocket, logger, asMaker;
 
     // Functions
     // ----------------
     // `_init` Initiates the price ticker and retrieves the current account balance
-    let _init = (pairs, configKeys, _logger) => {
+    let _init = (pairs, configKeys, _logger, _asMaker) => {
         return new Promise((resolve) => {
 
             logger = _logger;
+            asMaker = _asMaker;
 
             bitfinexRest = new BFX(configKeys.rest.key, configKeys.rest.secret, {version: 1, transform: true}).rest;
             bitfinexWebsocket = new BFX(configKeys.websocket.key, configKeys.websocket.secret, { version: 2, transform: true }).ws;
@@ -126,7 +127,7 @@ module.exports = (function () {
                     resolve(balances);
                 }
                 else {
-                    reject('Couldn\'t retrieve your balance');
+                    reject('Couldn\'t retrieve your balance: ' + JSON.stringify(err));
                 }
             });
         });
@@ -408,7 +409,7 @@ module.exports = (function () {
                         let amount = Math.abs(parseFloat(pos.amount)).toString();
                         return _order(pair, side, amount); // Place a cancellation order for each position, with the opposite side and the same amount.
                     });
-                    let cancellations = positions.concat(orders); // Cancel both orders and positions
+                    let cancellations = orders.concat(positions); // Cancel both orders and positions
                     Promise.all(cancellations).then(resolve).catch(reject);
                 }
                 else {
@@ -428,7 +429,7 @@ module.exports = (function () {
                     resolve(res);
                 }
                 else {
-                    reject('Couldn\'t cancel your order ' + orderId);
+                    reject('Couldn\'t cancel your order ' + orderId, err);
                 }
             });
         });
@@ -436,19 +437,19 @@ module.exports = (function () {
 
     // `_order` Places an order to bitfinex.
     // Orders should be succesfully sent and accepted every time, but they will not always fill
-    let _order = (pair, side, amount) => {
-        logger.log('order ' + pair + ', ' + side + ', ' + amount);
+    let _order = (pair, side, amount, maker) => {
         return new Promise((resolve, reject) => {
             _getBalances().then(balances => {
-                let tradeData = utils.parseTradeArguments(balances, pair, side, amount);
+                let tradeData = utils.parseTradeArguments(balances, pair, side, amount, maker);
                 if (!tradeData.error) {
                     tradeData = tradeData.data;
-                    bitfinexRest.new_order(tradeData.exchangePairName, tradeData.amount, tradeData.price, tradeData.exchange, tradeData.side, tradeData.type, (err) => {// symbol, amount, price, exchange, side, type, is_hidden, postOnly, cb
+                    logger.log('Placing a new order: ', tradeData, true);
+                    bitfinexRest.new_order(tradeData.exchangePairName, tradeData.amount, tradeData.price, tradeData.exchange, tradeData.side, tradeData.type, false, tradeData.maker, (err) => {// symbol, amount, price, exchange, side, type, is_hidden, postOnly, cb
                         if (!err) {
-                            resolve('Successfully placed a ' + tradeData.pair + ' ' + tradeData.side + ' order for ' + tradeData.amount + ' at a price of ' + tradeData.price);
+                            resolve('Successfully placed a ' + tradeData.pair + ' ' + tradeData.side + ' order for ' + tradeData.amount + ' at a price of ' + tradeData.price + (tradeData.maker ? ' as maker' : ' as taker'));
                         }
                         else {
-                            reject('Couldn\'t place a your order: ' + err);
+                            reject('Couldn\'t place a your order: ', err);
                         }
                     });
                 }
@@ -469,10 +470,9 @@ module.exports = (function () {
                 let amount = Math.abs(parseFloat(activePair.positions[0].amount)).toString();
                 let repeater = () => {
                     utils.recursiveTry(_stateHasChanged, [pair, 'idle'], 'stateHasChanged', 5, 5).then(() => { // then poll for state change
-                        _openNewPosition(pair, side, amount).then(resolve).catch(reject)
-                    }).catch(()=>{
-                        _resolvePendingOrders().then(repeater).catch(reject); // Repeat until the state successfully changes to idle. The
-                    })
+                        logger.log('Now idle');
+                        _openNewPosition(pair, side, amount).then(resolve).catch(reject);
+                    }).catch(reject)
                 };
                 if (state.state === 'active' && activePair && activePair.side !== side) { // Swing trade - exit and then place new order in new direction
                     _close(pair).then(repeater).catch(reject);
@@ -485,7 +485,7 @@ module.exports = (function () {
     };
 
     // `_openNewPosition` Places a trade if the bot had previously been idle.
-    let _openNewPosition = (pair, side, amount) => {
+    let _openNewPosition = (pair, side, amount, maker) => {
         logger.log('openNewPosition ' + pair + ', ' + side + ', ' + amount);
         return new Promise((resolve, reject) => {
             let repeater = () => {
@@ -495,7 +495,7 @@ module.exports = (function () {
             };
             _getState().then(state => {
                 if (state.state === 'idle') { // The state was previously idle
-                    _order(pair, side, amount).then(repeater).catch(reject);
+                    _order(pair, side, amount, maker).then(repeater).catch(reject);
                 }
                 else {
                     reject('Cannot open a new position when bot is ' + state.state);
@@ -512,8 +512,9 @@ module.exports = (function () {
                 if (state.state === 'pending') { // The state was previously pending
                     let pendingPair = _.find(state.activePairs, aP => { return aP.orders.length === 1; });
                     let order = pendingPair.orders[0]; // There should only ever be one order.
+                    let maker = false; // When resolving an order place the trade as a taker
                     _cancelOrder( order.id ).then(() => {
-                        _openNewPosition(order.pair, order.side, order.remaining_amount).then(resolve).catch(reject); // Updates the order price
+                        _openNewPosition(order.pair, order.side, order.remaining_amount, maker).then(resolve).catch(reject); // Updates the order price
                     }).catch(reject);
                 }
                 else {
@@ -556,7 +557,7 @@ module.exports = (function () {
                 if (
                     (state.state === 'active' && activePair.side === stateTest) || // 'There are active positions and the side of the positions matches the test state'
                     (!activePair && stateTest === 'idle')) { // There are no active positions and the test state is 'idle'.
-                    logger.log(JSON.stringify(state, null, 2), null, true);
+                    logger.log(state, null, true);
                     resolve(state); // Resolve with the current state
                 }
                 else {
@@ -576,13 +577,13 @@ module.exports = (function () {
                     attemptFunction.apply(this, args).then(resolve).catch(tryAgain);
                 };
                 let tryAgain = () => {
-                    logger.log('recursiveTry (' + retryCount + ') ' + name + ', ' + JSON.stringify(args));
+                    logger.log('recursiveTry (' + retryCount + ') ' + name + ', ', args);
                     retryCount--;
                     if (retryCount) {
                         setTimeout(newAttempt, delay * 1000);
                     }
                     else {
-                        reject('Failed ' + name + ' ' + retryCount + ' times.');
+                        reject('Failed ' + name + ' ' + noOfAttempts + ' times.');
                     }
                 };
                 tryAgain(); // Try for the first time.
@@ -599,14 +600,15 @@ module.exports = (function () {
         //          "side": "buy",
         //          "type": "limit"
         //      }
-        parseTradeArguments: (balances, pair, side, amount) => {
+        parseTradeArguments: (balances, pair, side, amount, maker) => {
             logger.log('parseTradeArguments ' + JSON.stringify(balances) + ', ' + pair + ', ' + side + ', ' + amount);
             let res = {
                 data: {},
                 error: null
             };
             let sides = ['buy', 'sell'];
-            let price = side === 'buy' ? prices[pair].ask : prices[pair].bid;
+            maker = _.isBoolean(maker) ? maker : asMaker;
+            let price = side === 'buy' ? prices[pair][maker?'bid':'ask'] : prices[pair][maker?'ask':'bid'];
             let exchangePairName = exchangePairNames[pair];
             let exchangeBalance = _.find(balances, {pair: pair}).balance;
             if (!_.includes(sides, side)) {
@@ -615,8 +617,11 @@ module.exports = (function () {
             else if (!_.includes(_.keys(exchangePairNames), pair) || !exchangePairName || !exchangePairName.length) {
                 res.error = 'No valid pair name provided';
             }
-            else if (!_.isNumber(_.find(balances, {pair: pair}).balance)) {
-                res.error = 'No valid exchangeBalance provided';
+            else if (!_.isNumber(parseFloat(amount)) && amount !== '*'){
+                res.error = 'Invalid amount provided'
+            }
+            else if (amount === '*' &&  !_.isNumber(exchangeBalance)) {
+                res.error = 'exchangeBalance not valid';
             }
             else if (!_.isNumber(price) || !price) {
                 res.error = 'No valid price provided';
@@ -629,6 +634,7 @@ module.exports = (function () {
                     exchangePairName,
                     exchange: 'bitfinex',
                     side,
+                    maker,
                     type: 'limit'
                 };
             }

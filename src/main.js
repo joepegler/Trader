@@ -44,6 +44,7 @@ module.exports = (function() {
                 .then(initTelegram)
                 .then(initLogger)
                 .then(initExchange)
+                .then(initTelegramActions)
                 .then(initApi)
                 .then(console.log)
                 .catch(console.error)
@@ -104,12 +105,20 @@ module.exports = (function() {
                 let exchangeName = exchangeOpts.exchangeName;
                 let configKeys = exchangeOpts.apiKeys[exchangeName];
                 let pairs = config.exchange.enabledPairs;
+                let asMaker = config.exchange.asMaker;
                 features.exchange = require('./' + exchangeName);
-                features.exchange.init(pairs, configKeys, features.logger).then(resolve).catch(reject);
+                features.exchange.init(pairs, configKeys, features.logger, asMaker).then(resolve).catch(reject);
             }
             else {
                 resolve('Missing exchange options from npm command');
             }
+        })
+    }
+
+    function initTelegramActions(){
+        console.info('initTelegramActions');
+        return new Promise((resolve) => {
+            features.telegram.initActions(features.exchange).then(resolve);
         })
     }
 
