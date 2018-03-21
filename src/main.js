@@ -38,6 +38,15 @@ module.exports = (function() {
                 .then(console.log)
                 .catch(console.error)
         }
+        else if(process.argv[2] === 'apitest') {
+            initIo()
+                .then()
+                .then(initLogger)
+                .then(initExchange)
+                .then(initApi)
+                .then(console.log)
+                .catch(console.error)
+        }
         else {
             initIo()
                 .then()
