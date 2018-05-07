@@ -10,9 +10,9 @@ module.exports = (function() {
     const logger = {
         init: (_io, txtFile, tlgrm) => {
             return new Promise((resolve) => {
-                io = _io;
+                if (_io) io = _io;
                 textFile = txtFile;
-                telegram = tlgrm;
+                if (tlgrm) telegram = tlgrm;
                 resolve('Initiated logger');
             });
         },

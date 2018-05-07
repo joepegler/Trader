@@ -36,5 +36,12 @@ module.exports = {
     ui: {
         directory: 'www',
         openBrowser: true
+    },
+    db: {
+        user: 'xx',
+        host: 'xxx',
+        database: 'xxx',
+        password: 'xxx',
+        port: 5432
     }
 };
