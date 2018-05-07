@@ -19,12 +19,12 @@ module.exports = (function() {
     function getInput(result){
 
         if(result) logger.log(result);
-        console.log(`Pick an action: [b]alances, [buy], [sell], [c]lose, [e]xit, [s]tate, [o]rders, [p]ositions, [r]esolve`);
+        console.log(`Pick an action: [b]alances, [buy], [sell], [s]tate, [o]rders, [p]ositions`);
 
         // Get user input
         prompt.get(['action'], function (err, res) {
             console.log('\n');
-            if(!err && res.action) toolkit.performAction( res.action ).then(getInput).catch(getInput);
+            if(!err && res.action) toolkit.performAction(res.action).then(getInput).catch(getInput);
         });
 
     }

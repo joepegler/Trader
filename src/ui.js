@@ -9,7 +9,6 @@ module.exports = (function() {
     return {
         init: function(server, app, uiPort, io, toolkit, dir, openBrowser, logger){
             return new Promise((resolve) => {
-                server.listen(uiPort);
                 app.use(express.static(path.join(__dirname, '/' + dir)));
                 openBrowser && opn('http://localhost:' + uiPort);
                 io.on('connection', client => {

@@ -9,19 +9,23 @@ module.exports = (function() {
     let features = {
         server:     null,
         io:         null,
+        db:         null,
         telegram:   null,
         logger:     null,
         exchange:   null,
         terminal:   null,
-        toolkit:    null
+        toolkit:    null,
     };
 
     (function init(){
 
-        if(process.argv[2] === 'ui'){
+        let commandLineArg = process.argv[2];
+
+        if(commandLineArg === 'ui'){
             initIo()
                 .then()
                 .then(initLogger)
+                .then(initDb)
                 .then(initExchange)
                 .then(initToolkit)
                 .then(initUi)
@@ -38,10 +42,11 @@ module.exports = (function() {
                 .then(console.log)
                 .catch(console.error)
         }
-        else if(process.argv[2] === 'apitest') {
+        else if(commandLineArg === 'apitest') {
             initIo()
                 .then()
                 .then(initLogger)
+                .then(initDb)
                 .then(initExchange)
                 .then(initApi)
                 .then(console.log)
@@ -52,6 +57,7 @@ module.exports = (function() {
                 .then()
                 .then(initTelegram)
                 .then(initLogger)
+                .then(initDb)
                 .then(initExchange)
                 .then(initTelegramActions)
                 .then(initApi)
@@ -106,6 +112,19 @@ module.exports = (function() {
         })
     }
 
+    function initDb(){
+        return new Promise((resolve, reject) => {
+            let dbOpts = config.db;
+            if (dbOpts){
+                features.db = require('./db');
+                features.db.init(dbOpts).then(resolve).catch(reject);
+            }
+            else {
+                resolve('Missing dbOpts options');
+            }
+        })
+    }
+
     function initExchange(){
         console.info('initExchange');
         return new Promise((resolve, reject) => {
@@ -113,10 +132,8 @@ module.exports = (function() {
             if (exchangeOpts) {
                 let exchangeName = exchangeOpts.exchangeName;
                 let configKeys = exchangeOpts.apiKeys[exchangeName];
-                let pairs = config.exchange.enabledPairs;
-                let asMaker = config.exchange.asMaker;
                 features.exchange = require('./' + exchangeName);
-                features.exchange.init(pairs, configKeys, features.logger, asMaker).then(resolve).catch(reject);
+                features.exchange.init(configKeys, features.logger, features.db).then(resolve).catch(reject);
             }
             else {
                 resolve('Missing exchange options from npm command');
@@ -135,7 +152,7 @@ module.exports = (function() {
         console.info('initToolkit');
         return new Promise((resolve, reject) => {
             features.toolkit = require('./toolkit');
-            features.toolkit.init(features.exchange).then(resolve).catch(reject);
+            features.toolkit.init(features.exchange, features.db).then(resolve).catch(reject);
             resolve('Initiated toolkit');
         })
     }
@@ -148,7 +165,7 @@ module.exports = (function() {
                 let port = apiOpts.port;
                 let authToken = apiOpts.authToken;
                 let api = require('./api');
-                api.init(app, port, authToken, features.exchange, features.logger).then(resolve).catch(reject);
+                api.init(app, port, authToken, features.exchange, features.logger, features.db).then(resolve).catch(reject);
             }
             else {
                 resolve('Missing api options from npm command');
@@ -160,13 +177,13 @@ module.exports = (function() {
         console.info('initUi');
         return new Promise((resolve, reject) => {
             let uiOpts = config.ui;
-            // let ioOpts = config.io;
             if (uiOpts) {
                 let uiPort = uiOpts.port;
                 let directory = uiOpts.directory;
                 let openBrowser = uiOpts.openBrowser;
                 let ui = require('./ui');
-                ui.init(features.server, app, uiPort, features.io, features.toolkit, directory, openBrowser, features.logger).then(resolve).catch(reject);
+                let newServer = require('http').createServer(app);
+                ui.init(newServer, app, uiPort, features.io, features.toolkit, directory, openBrowser, features.logger).then(resolve).catch(reject);
             }
             else {
                 resolve('Missing api options from npm command');
