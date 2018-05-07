@@ -25,9 +25,6 @@ module.exports = (function() {
                             case 'state':
                                 exchange.getState().then(tlgrm.sendMessage).catch(tlgrm.sendMessage);
                                 break;
-                            case 'resolve':
-                                exchange.resolvePendingOrders().then(tlgrm.sendMessage).catch(tlgrm.sendMessage);
-                                break;
                         }
                     }
                 });

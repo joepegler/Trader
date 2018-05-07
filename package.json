@@ -6,13 +6,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node ./src/main",
-    "docs": "docco ./src/exchanges/bitfinex.js -o ./src/www/docs",
-    "play": "node ./src/playground"
+    "docs": "docco ./src/exchanges/bitfinex.js -o ./src/www/docs"
   },
   "author": "Joe Pegler",
   "license": "ISC",
   "dependencies": {
-    "bitfinex-api-node": "^1.2.1",
+    "bitfinex-api-node": "^2.0.0-beta.1",
     "body-parser": "^1.18.2",
     "express": "^4.16.2",
     "lodash": "^4.17.4",
@@ -20,6 +19,7 @@
     "mongodb": "^3.0.3",
     "node-telegram-bot-api": "^0.29.0",
     "opn": "^5.2.0",
+    "pg": "^7.4.2",
     "promise": "^8.0.1",
     "prompt": "^1.0.0",
     "socket.io": "^2.0.4"
