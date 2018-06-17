@@ -32,6 +32,15 @@ module.exports = (function() {
                 .then(console.log)
                 .catch(console.error)
         }
+        if(commandLineArg === 'test'){
+            initIo()
+                .then()
+                .then(initLogger)
+                .then(initExchange)
+                .then(initStrategy)
+                .then(console.log)
+                .catch(console.error)
+        }
         else if(process.argv[2] === 'dev') {
             initIo()
                 .then()
@@ -136,8 +145,16 @@ module.exports = (function() {
                 features.exchange.init(configKeys, features.logger, features.db).then(resolve).catch(reject);
             }
             else {
-                resolve('Missing exchange options from npm command');
+                reject('Missing exchange options from npm command');
             }
+        })
+    }
+
+    function initStrategy(){
+        console.info('initStrategy');
+        return new Promise((resolve, reject) => {
+            features.strategy = require('./strategy');
+            features.strategy.init(features.exchange, features.logger).then(resolve).catch(reject);
         })
     }
 

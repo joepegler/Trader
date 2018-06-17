@@ -11,6 +11,19 @@ module.exports = (function(){
 
     let ws, rest, db, logger; // APIs & DB
 
+    function _getCandles(pair, timeframe, limit){
+        logger.log('_getCandles');
+        return new Promise((resolve, reject) => {
+            rest.candles({ timeframe: timeframe, symbol: 't' + pair.toUpperCase(), section: 'hist', query: { limit: limit } }, (err, _candles) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(_candles.reverse());
+            });
+        })
+    }
+
     function _getOrders(){
         logger.log('getOrders');
         return new Promise((resolve, reject) => {
@@ -132,7 +145,8 @@ module.exports = (function(){
             rest = bfx2.rest();
             ws.on('error', logger.log);
             ws.on('open', ws.auth.bind(ws));
-            ws.once('auth', resolve);
+            // ws.once('auth', resolve);
+            resolve();
             ws.open();
         });
 
@@ -170,6 +184,7 @@ module.exports = (function(){
         getState: _getState,
         getPositions: _getPositions,
         getOrders: _getOrders,
+        getCandles: _getCandles,
         getBalance: _getBalance,
         matchPositionsWithSignals: _matchPositionsWithSignals,
         init: _init
