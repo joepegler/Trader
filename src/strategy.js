@@ -6,17 +6,29 @@ module.exports = (function() {
     const _ = require('lodash');
     const moment = require('moment');
     const tulind = require('tulind');
+    const schedule = require('node-schedule');
 
-    let exchange, logger, marketData = { ts:[], open:[], close: [], high: [], low: [], volume: [] }, INTERVAL_TIMEOUT = 5 * 60 * 1000;
+    let exchange, logger, marketData = { ts:[], open:[], close: [], high: [], low: [], volume: [] }, INTERVAL_TIMEOUT = 5 * 60 * 1000, strategyOptions;
 
-    function init(_exchange, _logger){
+    function init(_exchange, _logger, _strategyOptions){
         return new Promise((resolve, reject) => {
             exchange = _exchange;
             logger = _logger;
-            getDataSets().then(getIndicators);
-            // setInterval(interval, INTERVAL_TIMEOUT);
+            strategyOptions = _strategyOptions;
+            schedule.scheduleJob('3 59 * * * *', execute);
+            execute(); // for testing
             resolve('Initiated strategy');
         });
+    }
+
+    function execute(){
+        return new Promise((resolve, reject) => {
+            getDataSets()
+                .then(getSignal)
+                .then(tradeSignal)
+                .then(resolve)
+                .catch(reject)
+        })
     }
 
     function getDataSets(){
@@ -61,45 +73,65 @@ module.exports = (function() {
         });
     };
 
-    function getIndicators(){
+    function getSignal(){
+        return new Promise((resolve, reject) => {
+            logger.log('getSignal');
+            let indicators = [ema(8), ema(13), ema(21), ema(34), ema(55), rsi(14)];
+            Promise.all(indicators).then(indctrs => {
+                let ema8 = indctrs[0];
+                let ema13 = indctrs[1];
+                let ema21 = indctrs[2];
+                let ema34 = indctrs[3];
+                let ema55 = indctrs[4];
+                let rsi = indctrs[5];
+                //EMA
+                let EMALongEntry = ema8 > ema13 && ema13 > ema21 && ema21 > ema34 && ema34 > ema55;
+                let EMABearEntry = ema8 < ema13 && ema13 < ema21 && ema21 < ema34 && ema34 < ema55;
+                let EMABullExit = ema13 < ema21;
+                let EMABearExit = ema13 > ema21;
 
-        logger.log('getIndicators');
+                //RSI
+                let RSIBullEntry = rsi > 30 && rsi < 70;
+                let RSIBearEntry = rsi > 30 && rsi < 70;
+                let RSIBullExit = rsi > 70;
+                let RSIBearExit = rsi < 30;
 
-        let indicators = [ema(8), ema(13), ema(21), ema(34), ema(55), rsi(14)];
+                let long = EMALongEntry && RSIBullEntry;
+                let short = EMABearEntry && RSIBearEntry;
+                let closeLong = RSIBullExit || EMABullExit;
+                let closeShort = RSIBearExit || EMABearExit;
 
-        Promise.all(indicators).then(indctrs => {
+                let signal = {long, short, closeLong, closeShort};
 
-            let ema8 = indctrs[0];
-            let ema13 = indctrs[1];
-            let ema21 = indctrs[2];
-            let ema34 = indctrs[3];
-            let ema55 = indctrs[4];
-            let rsi = indctrs[5];
+                resolve(signal);
 
-            logger.log(indctrs);
+            }).catch(reject);
+        });
+    }
 
-            //EMA
-            let EMALongEntry = ema8 > ema13 && ema13 > ema21 && ema21 > ema34 && ema34 > ema55;
-            let EMABearEntry = ema8 < ema13 && ema13 < ema21 && ema21 < ema34 && ema34 < ema55;
+    function tradeSignal(signal){
 
-            let EMABullExit = ema13 < ema21;
-            let EMABearExit = ema13 > ema21;
+        exchange.getState().then(state => {
+           console.info('state: ' + JSON.stringify(state));
+        });
 
-            //RSI
-            let RSIBullEntry = rsi > 30 && rsi < 70;
-            let RSIBearEntry = rsi > 30 && rsi < 70;
+        let isLong, isShort, isIdle;
 
-            let RSIBullExit = rsi > 70;
-            let RSIBearExit = rsi < 30;
+        if ( isLong || isShort ){
+            let depth;
+        }
+        else {
+            // Create a new signal
+        }
 
-        }).catch(logger.error)
+        logger.log(signal);
+
+        // If state === long and depth !==
 
     }
 
     return {
-        init: init,
-        ema: ema,
-        rsi: rsi
+        init: init
     }
 
 })();

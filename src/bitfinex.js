@@ -153,29 +153,31 @@ module.exports = (function(){
     }
 
     function _matchPositionsWithSignals(){
-        logger.log('matchPositionsWithSignals');
-        let signalsAndState = [db.getIncompleteSignals(), _getState()];
-        Promise.all(signalsAndState).then(results => {
-            let signals = results[0];
-            let state = results[1];
-            let orders = signals.map(signal => {
-                let matchingPosition = _.find(state.positions, {pair: signal.pair});
-                if (matchingPosition) {
-                    let remainingAmount = parseFloat(signal.amount) - parseFloat(matchingPosition.amount);
-                    if (remainingAmount !== 0) {
-                        logger.log('matchPositionsWithSignals success: ' + JSON.stringify(signal));
-                        return _order(signal.pair, remainingAmount.toString(), signal.id);
+        return new Promise((resolve, reject) => {
+            logger.log('matchPositionsWithSignals');
+            let signalsAndState = [db.getIncompleteSignals(), _getState()];
+            Promise.all(signalsAndState).then(results => {
+                let signals = results[0];
+                let state = results[1];
+                let orders = signals.map(signal => {
+                    let matchingPosition = _.find(state.positions, {pair: signal.pair});
+                    if (matchingPosition) {
+                        let remainingAmount = parseFloat(signal.amount) - parseFloat(matchingPosition.amount);
+                        if (remainingAmount !== 0) {
+                            logger.log('matchPositionsWithSignals success: ' + JSON.stringify(signal));
+                            return _order(signal.pair, remainingAmount.toString(), signal.id);
+                        }
+                        else {
+                            return db.markSignalDone(signal.id);
+                        }
                     }
                     else {
-                        return db.markSignalDone(signal.id);
+                        logger.log('matchPositionsWithSignals success: ' + JSON.stringify(signal));
+                        return _order(signal.pair, parseFloat(signal.amount), signal.id);
                     }
-                }
-                else {
-                    logger.log('matchPositionsWithSignals success: ' + JSON.stringify(signal));
-                    return _order(signal.pair, parseFloat(signal.amount), signal.id);
-                }
-            });
-            Promise.all(orders).then(resolve).catch(reject);
+                });
+                Promise.all(orders).then(resolve).catch(reject);
+            }).catch(reject);
         })
     }
 

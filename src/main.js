@@ -152,9 +152,10 @@ module.exports = (function() {
 
     function initStrategy(){
         console.info('initStrategy');
+        let stratOpts = config.strategy;
         return new Promise((resolve, reject) => {
             features.strategy = require('./strategy');
-            features.strategy.init(features.exchange, features.logger).then(resolve).catch(reject);
+            features.strategy.init(features.exchange, features.logger, stratOpts).then(resolve).catch(reject);
         })
     }
 

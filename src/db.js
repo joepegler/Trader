@@ -15,6 +15,13 @@ module.exports = (function(){
         });
     }
 
+    function _getProgress(pair){
+        return new Promise((resolve, reject) => {
+            const text = 'SELECT progress FROM trades';
+            client.query(text).then(res => resolve(res.rows.reverse()[0])).catch(reject);
+        });
+    }
+
     function _getIncompleteSignals(){
         return new Promise((resolve, reject) => {
             const text = 'SELECT * FROM signals WHERE done = FALSE';
