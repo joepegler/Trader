@@ -2,136 +2,80 @@ module.exports = (function() {
 
     "use strict";
 
-    const prompt = require('prompt');
     const _ = require('lodash');
-    const moment = require('moment');
-    const tulind = require('tulind');
-    const schedule = require('node-schedule');
 
-    let exchange, logger, marketData = { ts:[], open:[], close: [], high: [], low: [], volume: [] }, INTERVAL_TIMEOUT = 5 * 60 * 1000, strategyOptions;
+    let exchange, logger, strategyOptions, signaller, db;
 
-    function init(_exchange, _logger, _strategyOptions){
+    let pair = 'BTCUSD';
+
+    function init(_exchange, _logger, _strategyOptions, _signaller, _db){
         return new Promise((resolve, reject) => {
+            db = _db;
+            signaller = _signaller;
             exchange = _exchange;
             logger = _logger;
             strategyOptions = _strategyOptions;
-            schedule.scheduleJob('3 59 * * * *', execute);
-            execute(); // for testing
-            resolve('Initiated strategy');
+            // setInterval(execute, 1000 * 60 * 60); // Every hour
+            execute().then(resolve).catch(reject); //For testing
         });
     }
 
     function execute(){
-        return new Promise((resolve, reject) => {
-            getDataSets()
-                .then(getSignal)
-                .then(tradeSignal)
-                .then(resolve)
-                .catch(reject)
-        })
+        return signaller.getSignal(pair, '1h', 55).then(tradeStrategy);
     }
 
-    function getDataSets(){
-        return new Promise((resolve, reject) => {
-            exchange.getCandles('BTCUSD', '1h', 55).then(candles => {
-                candles.forEach(ochlvArr => {
-                    marketData.open.push(ochlvArr[1]);
-                    marketData.close.push(ochlvArr[2]);
-                    marketData.high.push(ochlvArr[3]);
-                    marketData.low.push(ochlvArr[4]);
-                    marketData.volume.push(ochlvArr[5]);
-                });
-                logger.log('Candles: ' + candles.length + ' starting on ' + moment(_.last(candles)[0]).format('YY-MM-DD HH:mm') + ' @ ' + _.last(candles)[2] + ' and ending on ' + moment(_.first(candles)[0]).format('YY-MM-DD HH:mm') + ' @ ' + _.first(candles)[2]);
-                resolve(candles);
-            }).catch(reject);
-        })
-    }
+    function tradeStrategy(signal){
 
-    let rsi = function(len){
         return new Promise((resolve, reject) => {
-            tulind.indicators.rsi.indicator([marketData.close], [len], function (err, results) {
-                if (!err) {
-                    resolve(parseFloat(_.last(results[0]).toFixed(2)));
+            Promise.all([exchange.getBalance(pair), exchange.getState(pair), db.getUntradedSignals()]).then(results => {
+                let balance = results[0];
+                let orders = results[1].orders;
+                let positions = results[1].positions;
+                let untradedSignals = _.find(results[2], {pair: pair});
+
+                let idle = !orders.length && !positions.length && !untradedSignals;
+
+                logger.log('signal: ');
+                logger.log(signal);
+                logger.log('balance: ');
+                logger.log(balance);
+                logger.log('orders: ');
+                logger.log(orders);
+                logger.log('positions: ');
+                logger.log(positions);
+
+                if ( idle ){
+
+                    if (signal.long){
+                        db.saveSignal('.002', 'BTCUSD')
+                            .then()
+                    }
+                    else if (signal.short){
+                        db.saveSignal('-.002', 'BTCUSD')
+                            .then()
+                    }
+
+                    // insert the first signal into db and match trade with signal
+                    // if successful then add a position to the databases with the pyramiding and topup index(1) and the initial amount.
+                    // Update the signal table entry with the position_id
+
                 }
                 else {
-                    reject(err)
+                    // get the current open position from the db. Check how many corresponding signals there have been
+                    // if index is less than pyramiding then add to the position.
+                    // insert signal into db and match trade with signal
+                    // if successful then
                 }
-            });
-        });
-    };
 
-    let ema = function(len){
-        return new Promise((resolve, reject) => {
-            tulind.indicators.ema.indicator([marketData.close], [len], function (err, results) {
-                if (!err) {
-                    resolve(parseFloat(_.last(results[0]).toFixed(2)));
-                }
-                else {
-                    reject(err);
-                }
-            });
-        });
-    };
-
-    function getSignal(){
-        return new Promise((resolve, reject) => {
-            logger.log('getSignal');
-            let indicators = [ema(8), ema(13), ema(21), ema(34), ema(55), rsi(14)];
-            Promise.all(indicators).then(indctrs => {
-                let ema8 = indctrs[0];
-                let ema13 = indctrs[1];
-                let ema21 = indctrs[2];
-                let ema34 = indctrs[3];
-                let ema55 = indctrs[4];
-                let rsi = indctrs[5];
-                //EMA
-                let EMALongEntry = ema8 > ema13 && ema13 > ema21 && ema21 > ema34 && ema34 > ema55;
-                let EMABearEntry = ema8 < ema13 && ema13 < ema21 && ema21 < ema34 && ema34 < ema55;
-                let EMABullExit = ema13 < ema21;
-                let EMABearExit = ema13 > ema21;
-
-                //RSI
-                let RSIBullEntry = rsi > 30 && rsi < 70;
-                let RSIBearEntry = rsi > 30 && rsi < 70;
-                let RSIBullExit = rsi > 70;
-                let RSIBearExit = rsi < 30;
-
-                let long = EMALongEntry && RSIBullEntry;
-                let short = EMABearEntry && RSIBearEntry;
-                let closeLong = RSIBullExit || EMABullExit;
-                let closeShort = RSIBearExit || EMABearExit;
-
-                let signal = {long, short, closeLong, closeShort};
-
-                resolve(signal);
+                resolve(':)');
 
             }).catch(reject);
-        });
-    }
-
-    function tradeSignal(signal){
-
-        exchange.getState().then(state => {
-           console.info('state: ' + JSON.stringify(state));
-        });
-
-        let isLong, isShort, isIdle;
-
-        if ( isLong || isShort ){
-            let depth;
-        }
-        else {
-            // Create a new signal
-        }
-
-        logger.log(signal);
-
-        // If state === long and depth !==
+        })
 
     }
 
     return {
         init: init
-    }
+    };
 
 })();

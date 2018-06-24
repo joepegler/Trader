@@ -26,6 +26,11 @@ module.exports = {
         enabledPairs: ['ETHBTC', 'BTCUSD', 'LTCBTC', 'XRPBTC', 'XMRBTC', 'DSHBTC'],
         asMaker: true
     },
+    strategy : {
+        pyramiding: 3,
+        qty_value: 33,
+        qty_type: 'percentage'
+    },
     api: {
         port: 0,
         authToken: 'XXX'

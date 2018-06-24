@@ -24,14 +24,13 @@ module.exports = (function(){
         })
     }
 
-    function _getOrders(){
+    function _getOrders(pair){
         logger.log('getOrders');
         return new Promise((resolve, reject) => {
             rest.activeOrders((err, orders) => {
                 if (err) {
                     reject(err);
-                    return;
-                }
+                    return;}
                 orders = orders.map(order => {
                     return {
                         id: order[0],
@@ -42,12 +41,15 @@ module.exports = (function(){
                         side: parseFloat(order[6]) > 0 ? 'buy' : 'sell',
                     };
                 });
+                if (pair){
+                    orders.filter(order => {return order.pair === pair});
+                }
                 resolve(orders);
             });
         })
     }
 
-    function _getPositions(){
+    function _getPositions(pair){
         logger.log('getPositions');
         return new Promise((resolve, reject) => {
             rest.positions((err, positions) => {
@@ -65,16 +67,19 @@ module.exports = (function(){
                         profit: position[6]
                     }
                 });
+                if (pair){
+                    positions.filter(position => {return position.pair === pair});
+                }
                 resolve(positions);
             });
         })
     }
 
-    function _getState(){
+    function _getState(pair){
         logger.log('getState');
         return new Promise((resolve, reject) => {
-            _getPositions().then(positions => {
-                _getOrders().then(orders => {
+            _getPositions(pair).then(positions => {
+                _getOrders(pair).then(orders => {
                     resolve({
                         positions: positions,
                         orders: orders
@@ -84,7 +89,7 @@ module.exports = (function(){
         })
     }
 
-    function _getBalance(){
+    function _getBalance(symbol){
         logger.log('_getBalance');
         return new Promise((resolve, reject) => {
             rest.balances((err, balances) => {
@@ -92,7 +97,13 @@ module.exports = (function(){
                     reject(err);
                     return;
                 }
-                resolve(balances);
+                let found = _.find(balances, {type: 'trading', currency: symbol || 'usd'});
+                if (found){
+                    resolve(found);
+                }
+                else {
+                    reject();
+                }
             });
         })
     }
@@ -155,12 +166,13 @@ module.exports = (function(){
     function _matchPositionsWithSignals(){
         return new Promise((resolve, reject) => {
             logger.log('matchPositionsWithSignals');
-            let signalsAndState = [db.getIncompleteSignals(), _getState()];
+            let signalsAndState = [db.getUntradedSignals(), _getState()];
             Promise.all(signalsAndState).then(results => {
                 let signals = results[0];
-                let state = results[1];
+                let positions = results[1].positions;
+                let openOrders = results[1].orders;
                 let orders = signals.map(signal => {
-                    let matchingPosition = _.find(state.positions, {pair: signal.pair});
+                    let matchingPosition = _.find(positions, {pair: signal.pair});
                     if (matchingPosition) {
                         let remainingAmount = parseFloat(signal.amount) - parseFloat(matchingPosition.amount);
                         if (remainingAmount !== 0) {

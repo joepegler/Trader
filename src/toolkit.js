@@ -12,14 +12,14 @@ module.exports = (function() {
         });
     }
 
-    function performAction(action){
+    function performAction(action, options){
         return new Promise((resolve, reject) => {
             switch( action ) {
                 case 'buy':
-                    db.saveSignal('.02', 'BTCUSD').then(signal => exchange.matchPositionsWithSignals().then(resolve).catch(reject)).catch(reject);
+                    db.saveSignal('.002', 'BTCUSD').then(signal => exchange.matchPositionsWithSignals().then(resolve).catch(reject)).catch(reject);
                     break;
                 case 'sell':
-                    db.saveSignal('-0.02', 'BTCUSD').then(signal => exchange.matchPositionsWithSignals().then(resolve).catch(reject)).catch(reject);
+                    db.saveSignal('-0.002', 'BTCUSD').then(signal => exchange.matchPositionsWithSignals().then(resolve).catch(reject)).catch(reject);
                     break;
                 case 'state':
                     exchange.getState().then(resolve).catch(reject);

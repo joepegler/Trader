@@ -15,14 +15,7 @@ module.exports = (function(){
         });
     }
 
-    function _getProgress(pair){
-        return new Promise((resolve, reject) => {
-            const text = 'SELECT progress FROM trades';
-            client.query(text).then(res => resolve(res.rows.reverse()[0])).catch(reject);
-        });
-    }
-
-    function _getIncompleteSignals(){
+    function _getUntradedSignals(){
         return new Promise((resolve, reject) => {
             const text = 'SELECT * FROM signals WHERE done = FALSE';
             client.query(text).then(res => resolve(_.uniqBy(res.rows.reverse(), 'pair'))).catch(reject);
@@ -40,8 +33,8 @@ module.exports = (function(){
         return new Promise((resolve, reject) => {
             const text = 'INSERT INTO trades(id, signal, pair, ts, amount, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
             const values = Object.values(trade);
-            client.query(text, values).then(dbResponse => {
-                _markSignalDone(trade.signal).then(dbResponseTwo => resolve(trade)).catch(reject);
+            client.query(text, values).then(() => {
+                _markSignalDone(trade.signal).then(() => resolve(trade)).catch(reject);
             });
         });
     }
@@ -57,7 +50,7 @@ module.exports = (function(){
     return {
         saveSignal: _saveSignal,
         markSignalDone: _markSignalDone,
-        getIncompleteSignals: _getIncompleteSignals,
+        getUntradedSignals: _getUntradedSignals,
         saveTrade: _saveTrade,
         init: _init
     }
