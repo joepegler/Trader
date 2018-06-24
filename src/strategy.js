@@ -21,19 +21,33 @@ module.exports = (function() {
     }
 
     function execute(){
-        return signaller.getSignal(pair, '1h', 55).then(tradeStrategy);
+        return new Promise((resolve, reject) => {
+            return signaller.getSignal(pair, '1h', 55).then(signal => {
+                tradeStrategy(signal, pair).then(resolve).catch(reject);
+            }).catch(reject);
+        });
     }
 
-    function tradeStrategy(signal){
+    function tradeStrategy(signal, pair){
+
+        // signal = {long, short, closeLong, closeShort}
 
         return new Promise((resolve, reject) => {
-            Promise.all([exchange.getBalance(pair), exchange.getState(pair), db.getUntradedSignals()]).then(results => {
+
+            Promise.all([exchange.getBalance('btc'), exchange.getState(pair), db.getUntradedSignals(pair), db.getOpenPositions(pair)]).then(results => {
+
                 let balance = results[0];
                 let orders = results[1].orders;
                 let positions = results[1].positions;
-                let untradedSignals = _.find(results[2], {pair: pair});
+                let untradedSignals = results[2];
+                let idle = !orders.length && !positions.length && !untradedSignals.length;
+                let balanceUsd = parseFloat(balance.amount);
+                let openPositionsFromDb = results[3];
+                let dbPosition = openPositionsFromDb[0];
+                let exchangePosition = positions[0];
+                let firstInstallment = Math.round(balanceUsd / strategyOptions.installments);
 
-                let idle = !orders.length && !positions.length && !untradedSignals;
+                firstInstallment = '0.002'; // Testing
 
                 logger.log('signal: ');
                 logger.log(signal);
@@ -43,35 +57,62 @@ module.exports = (function() {
                 logger.log(orders);
                 logger.log('positions: ');
                 logger.log(positions);
+                logger.log('untradedSignals: ');
+                logger.log(untradedSignals);
+                logger.log('balanceUsd: ');
+                logger.log(balanceUsd);
+                logger.log('firstInstallment: ');
+                logger.log(firstInstallment);
 
+                // If there are no open positions
                 if ( idle ){
-
-                    if (signal.long){
-                        db.saveSignal('.002', 'BTCUSD')
-                            .then()
+                    if (signal.short){
+                        db.savePosition(strategyOptions.installments, firstInstallment, pair, 'sell').then(signal => {
+                            exchange.matchPositionsWithSignals().then(resolve).catch(reject);
+                        }).catch(reject);
                     }
-                    else if (signal.short){
-                        db.saveSignal('-.002', 'BTCUSD')
-                            .then()
+                    else if(signal.long){
+                        db.savePosition(strategyOptions.installments, firstInstallment, pair, 'buy').then(signal => {
+                            exchange.matchPositionsWithSignals().then(resolve).catch(reject);
+                        }).catch(reject);
                     }
-
-                    // insert the first signal into db and match trade with signal
-                    // if successful then add a position to the databases with the pyramiding and topup index(1) and the initial amount.
-                    // Update the signal table entry with the position_id
-
                 }
                 else {
-                    // get the current open position from the db. Check how many corresponding signals there have been
-                    // if index is less than pyramiding then add to the position.
-                    // insert signal into db and match trade with signal
-                    // if successful then
+
+                    let dbAndExchangePostionsInSync = openPositionsFromDb.length === 1 && positions.length === 1 && exchangePosition.pair === dbPosition.pair;
+
+                    // There are open positions, either add to them or close them where necessary.
+                    if ( dbAndExchangePostionsInSync ) {
+
+                        db.getSignalsByPositionId(dbPosition.id).then(dbSignals => {
+
+                            let addToLong = signal.long && exchangePosition.side === 'buy' && dbSignals.length !== dbPosition.installments;
+                            let addToShort = signal.short && exchangePosition.side === 'sell' && dbSignals.length !== dbPosition.installments;
+                            let closeLong = signal.closeLong && exchangePosition.side === 'buy';
+                            let closeShort = signal.closeShort && exchangePosition.side === 'sell';
+
+                            if ( addToLong ){
+                                // Check that the installment limit has not been reached (dbSignals !== )
+                                // Add the next installment with a new signal
+                            }
+                            else if ( addToShort ){
+                                // Add the next installment with a new signal
+                            }
+                            else if ( closeLong ){
+                                // Close open position with a new signal && amount === 0
+                                // Mark the position as done
+                            }
+                            else if ( closeShort ) {
+
+                            }
+                        }).catch(reject);
+                    }
+                    else {
+                        reject('Cannot open multiple open positions');
+                    }
                 }
-
-                resolve(':)');
-
             }).catch(reject);
         })
-
     }
 
     return {

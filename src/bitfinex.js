@@ -30,21 +30,23 @@ module.exports = (function(){
             rest.activeOrders((err, orders) => {
                 if (err) {
                     reject(err);
-                    return;}
-                orders = orders.map(order => {
-                    return {
-                        id: order[0],
-                        pair: order[3].substring(1),
-                        ts: moment(order[4]).format('YYYY-MM-DD HH:mm:ss.SSSSSS'),
-                        amount: Math.abs(order[6]),
-                        status: order[13],
-                        side: parseFloat(order[6]) > 0 ? 'buy' : 'sell',
-                    };
-                });
-                if (pair){
-                    orders.filter(order => {return order.pair === pair});
                 }
-                resolve(orders);
+                else {
+                    orders = orders.map(order => {
+                        return {
+                            id: order[0],
+                            pair: order[3].substring(1),
+                            ts: moment(order[4]).format('YYYY-MM-DD HH:mm:ss.SSSSSS'),
+                            amount: Math.abs(order[6]),
+                            status: order[13],
+                            side: parseFloat(order[6]) > 0 ? 'buy' : 'sell',
+                        };
+                    });
+                    if (pair){
+                        orders.filter(order => {return order.pair.toLowerCase() === pair.toLowerCase()});
+                    }
+                    resolve(orders);
+                }
             });
         })
     }
@@ -55,22 +57,23 @@ module.exports = (function(){
             rest.positions((err, positions) => {
                 if (err) {
                     reject(err);
-                    return;
                 }
-                positions = positions.map(position => {
-                    return {
-                        pair: position[0].substring(1),
-                        amount: position[2],
-                        side: parseFloat(position[2]) > 0 ? 'buy' : 'sell',
-                        base: position[3],
-                        funding: position[4],
-                        profit: position[6]
+                else {
+                    positions = positions.map(position => {
+                        return {
+                            pair: position[0].substring(1),
+                            amount: position[2],
+                            side: parseFloat(position[2]) > 0 ? 'buy' : 'sell',
+                            base: position[3],
+                            funding: position[4],
+                            profit: position[6]
+                        }
+                    });
+                    if (pair){
+                        positions.filter(position => {return position.pair.toLowerCase() === pair.toLowerCase() });
                     }
-                });
-                if (pair){
-                    positions.filter(position => {return position.pair === pair});
+                    resolve(positions);
                 }
-                resolve(positions);
             });
         })
     }
@@ -98,12 +101,7 @@ module.exports = (function(){
                     return;
                 }
                 let found = _.find(balances, {type: 'trading', currency: symbol || 'usd'});
-                if (found){
-                    resolve(found);
-                }
-                else {
-                    reject();
-                }
+                resolve(found || balances);
             });
         })
     }
