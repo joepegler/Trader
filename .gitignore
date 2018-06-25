@@ -4,3 +4,4 @@ log.txt
 config.js
 src/www/docs
 package-lock\.json
+package-lock.json
