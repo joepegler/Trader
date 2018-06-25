@@ -26,6 +26,12 @@ module.exports = {
         enabledPairs: ['ETHBTC', 'BTCUSD', 'LTCBTC', 'XRPBTC', 'XMRBTC', 'DSHBTC'],
         asMaker: true
     },
+    strategy : {
+        installments: 3,
+        topupOffset: 5,
+        timeframe: '1h',
+        maxLookback: 55
+    },
     api: {
         port: 0,
         authToken: 'XXX'
