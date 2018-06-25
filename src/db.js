@@ -29,7 +29,7 @@ module.exports = (function(){
         });
     }
 
-    function _getincompleteOrders(pair){
+    function _getIncompleteOrders(pair){
         return new Promise((resolve, reject) => {
             const text = 'SELECT * FROM orders WHERE done = FALSE';
             client.query(text).then(res => {
@@ -99,7 +99,7 @@ module.exports = (function(){
         savePosition: _savePosition,
         markOrderDone: _markOrderDone,
         markPositionDone: _markPositionDone,
-        getincompleteOrders: _getincompleteOrders,
+        getIncompleteOrders: _getIncompleteOrders,
         getOpenPositions: _getOpenPositions,
         getOrdersByPositionId: _getOrdersByPositionId,
         saveTrade: _saveTrade,

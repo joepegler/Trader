@@ -31,7 +31,7 @@ module.exports = (function() {
             let promises = [
                 exchange.getBalance(pair),
                 exchange.getState(pair),
-                db.getincompleteOrders(pair),
+                db.getIncompleteOrders(pair),
                 db.getOpenPositions(pair),
                 signaller.getSignal(pair, strategyOptions.timeframe, strategyOptions.maxLookback)
             ];

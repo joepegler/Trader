@@ -172,7 +172,7 @@ module.exports = (function(){
     function _placeTradesWithDbOrders(){
         return new Promise((resolve, reject) => {
             logger.log('placeTradesWithDbOrders');
-            let ordersAndState = [db.getincompleteOrders(), _getState()];
+            let ordersAndState = [db.getIncompleteOrders(), _getState()];
             Promise.all(ordersAndState).then(results => {
                 let incompleteOrders = results[0];
                 let positions = results[1].positions;
