@@ -7,9 +7,9 @@ module.exports = (function(){
     const { Client } = require('pg');
     let client;
 
-    function _saveSignal(amount, pair, positionId){
+    function _saveOrder(amount, pair, positionId){
         return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO signals(side, amount, ts, pair, done, position) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
+            const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
             const values = [parseFloat(amount) > 0 ? 'buy' : 'sell', amount.toString(), 'NOW()', pair, 'false', positionId];
             client.query(text, values).then(dbResponse => {
                 resolve(values)
@@ -24,27 +24,27 @@ module.exports = (function(){
             client.query(text, values).then(dbResponse => {
                 let positionId = dbResponse.rows[0].id;
                 let amount = side === 'sell' ? -size : size;
-                _saveSignal(amount, pair, positionId).then(resolve).catch(reject);
+                _saveOrder(amount, pair, positionId).then(resolve).catch(reject);
             }).catch(reject);
         });
     }
 
-    function _getUntradedSignals(pair){
+    function _getincompleteOrders(pair){
         return new Promise((resolve, reject) => {
-            const text = 'SELECT * FROM signals WHERE done = FALSE';
+            const text = 'SELECT * FROM orders WHERE done = FALSE';
             client.query(text).then(res => {
-                let signals = _.uniqBy(res.rows.reverse(), 'pair');
+                let orders = _.uniqBy(res.rows.reverse(), 'pair');
                 if (pair){
-                    signals = signals.filter(signal => { return signal.pair === pair });
+                    orders = orders.filter(order => { return order.pair === pair });
                 }
-                resolve(signals)
+                resolve(orders)
             }).catch(reject);
         });
     }
 
-    function _getSignalsByPositionId(positionId){
+    function _getOrdersByPositionId(positionId){
         return new Promise((resolve, reject) => {
-            const text = 'SELECT * FROM signals WHERE position = ' + positionId;
+            const text = 'SELECT * FROM orders WHERE position_id = ' + positionId;
             client.query(text).then(res => { resolve(res.rows) }).catch(reject);
         });
     }
@@ -62,19 +62,26 @@ module.exports = (function(){
         });
     }
 
-    function _markSignalDone(signalId){
+    function _markOrderDone(orderId){
         return new Promise((resolve, reject) => {
-            const text = 'UPDATE signals SET done = TRUE WHERE ID = $1';
-            client.query(text, [signalId]).then(dbResponse => resolve(signalId)).catch(reject);
+            const text = 'UPDATE orders SET done = TRUE WHERE ID = $1';
+            client.query(text, [orderId]).then(dbResponse => resolve(orderId)).catch(reject);
+        });
+    }
+
+    function _markPositionDone(positionId){
+        return new Promise((resolve, reject) => {
+            const text = 'UPDATE positions SET done = TRUE WHERE ID = $1';
+            client.query(text, [positionId]).then(dbResponse => resolve(positionId)).catch(reject);
         });
     }
 
     function _saveTrade(trade){
         return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO trades(id, signal, pair, ts, amount, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
+            const text = 'INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
             const values = Object.values(trade);
             client.query(text, values).then(() => {
-                _markSignalDone(trade.signal).then(() => resolve(trade)).catch(reject);
+                _markOrderDone(trade.order).then(() => resolve(trade)).catch(reject);
             });
         });
     }
@@ -88,12 +95,13 @@ module.exports = (function(){
     }
 
     return {
-        saveSignal: _saveSignal,
+        saveOrder: _saveOrder,
         savePosition: _savePosition,
-        markSignalDone: _markSignalDone,
-        getUntradedSignals: _getUntradedSignals,
+        markOrderDone: _markOrderDone,
+        markPositionDone: _markPositionDone,
+        getincompleteOrders: _getincompleteOrders,
         getOpenPositions: _getOpenPositions,
-        getSignalsByPositionId: _getSignalsByPositionId,
+        getOrdersByPositionId: _getOrdersByPositionId,
         saveTrade: _saveTrade,
         init: _init
     }

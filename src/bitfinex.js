@@ -95,13 +95,21 @@ module.exports = (function(){
     function _getBalance(symbol){
         logger.log('_getBalance');
         return new Promise((resolve, reject) => {
-            rest.balances((err, balances) => {
+            rest.ticker('t' + symbol, (err, res) => {
                 if (err) {
                     reject(err);
-                    return;
                 }
-                let found = _.find(balances, {type: 'trading', currency: symbol || 'usd'});
-                resolve(found || balances);
+                else {
+                    let price = ((res[0] + res[2]) / 2);
+                    rest.calcAvailableBalance('t' + symbol, 1, price, 'MARGIN', (err, balance) => {
+                        if (err) {
+                            reject(err);
+                        }
+                        else {
+                            resolve(balance[0]);
+                        }
+                    });
+                }
             });
         })
     }
@@ -161,32 +169,32 @@ module.exports = (function(){
 
     }
 
-    function _matchPositionsWithSignals(){
+    function _placeTradesWithDbOrders(){
         return new Promise((resolve, reject) => {
-            logger.log('matchPositionsWithSignals');
-            let signalsAndState = [db.getUntradedSignals(), _getState()];
-            Promise.all(signalsAndState).then(results => {
-                let signals = results[0];
+            logger.log('placeTradesWithDbOrders');
+            let ordersAndState = [db.getincompleteOrders(), _getState()];
+            Promise.all(ordersAndState).then(results => {
+                let incompleteOrders = results[0];
                 let positions = results[1].positions;
                 let openOrders = results[1].orders;
-                let orders = signals.map(signal => {
-                    let matchingPosition = _.find(positions, {pair: signal.pair});
+                let orderPromises = incompleteOrders.map(order => {
+                    let matchingPosition = _.find(positions, {pair: order.pair});
                     if (matchingPosition) {
-                        let remainingAmount = parseFloat(signal.amount) - parseFloat(matchingPosition.amount);
+                        let remainingAmount = parseFloat(order.amount) - parseFloat(matchingPosition.amount);
                         if (remainingAmount !== 0) {
-                            logger.log('matchPositionsWithSignals success: ' + JSON.stringify(signal));
-                            return _order(signal.pair, remainingAmount.toString(), signal.id);
+                            logger.log('placeTradesWithDbOrders success: ' + JSON.stringify(order));
+                            return _order(order.pair, remainingAmount.toString(), order.id);
                         }
                         else {
-                            return db.markSignalDone(signal.id);
+                            return db.markOrderDone(order.id);
                         }
                     }
                     else {
-                        logger.log('matchPositionsWithSignals success: ' + JSON.stringify(signal));
-                        return _order(signal.pair, parseFloat(signal.amount), signal.id);
+                        logger.log('placeTradesWithDbOrders success: ' + JSON.stringify(order));
+                        return _order(order.pair, parseFloat(order.amount), order.id);
                     }
                 });
-                Promise.all(orders).then(resolve).catch(reject);
+                Promise.all(orderPromises).then(resolve).catch(reject);
             }).catch(reject);
         })
     }
@@ -198,7 +206,7 @@ module.exports = (function(){
         getOrders: _getOrders,
         getCandles: _getCandles,
         getBalance: _getBalance,
-        matchPositionsWithSignals: _matchPositionsWithSignals,
+        placeTradesWithDbOrders: _placeTradesWithDbOrders,
         init: _init
     }
 

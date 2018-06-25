@@ -27,9 +27,10 @@ module.exports = {
         asMaker: true
     },
     strategy : {
-        pyramiding: 3,
-        qty_value: 33,
-        qty_type: 'percentage'
+        installments: 3,
+        topupOffset: 5,
+        timeframe: '1h',
+        maxLookback: 55
     },
     api: {
         port: 0,

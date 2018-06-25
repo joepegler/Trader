@@ -37,6 +37,7 @@ module.exports = (function() {
         if(commandLineArg === 'test'){
             initIo()
                 .then()
+                .then(initTelegram)
                 .then(initLogger)
                 .then(initDb)
                 .then(initExchange)
