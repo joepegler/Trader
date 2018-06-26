@@ -157,9 +157,10 @@ module.exports = (function() {
 
     function initSignaller(){
         console.info('initSignaller');
+        let stratOpts = config.strategy;
         return new Promise((resolve, reject) => {
             features.signaller = require('./signaller');
-            features.signaller.init(features.exchange, features.logger).then(resolve).catch(reject);
+            features.signaller.init(features.exchange, features.logger, stratOpts).then(resolve).catch(reject);
         });
     }
 

@@ -2,19 +2,20 @@ module.exports = (function() {
 
     "use strict";
 
-    const _ = require('lodash');
+    const sequence = require('promise-sequence');
 
     let exchange, logger, strategyOptions, signaller, db, ticker = 0;
 
     function init(_exchange, _logger, _strategyOptions, _signaller, _db){
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             db = _db;
             signaller = _signaller;
             exchange = _exchange;
             logger = _logger;
             strategyOptions = _strategyOptions;
-            setInterval(execute, 1000 * 60 * 60); // Every hour
-            resolve('initiated strategy');
+            // setInterval(execute, 1000 * 60 * 60); // Every hour
+            execute();
+            resolve('Initiated strategy');
         });
     }
 
@@ -23,11 +24,8 @@ module.exports = (function() {
     }
 
     function tradeStrategy(pair){
-
         ticker++;
-
         return new Promise((resolve, reject) => {
-
             let promises = [
                 exchange.getBalance(pair),
                 exchange.getState(pair),
@@ -35,8 +33,7 @@ module.exports = (function() {
                 db.getOpenPositions(pair),
                 signaller.getSignal(pair, strategyOptions.timeframe, strategyOptions.maxLookback)
             ];
-
-            Promise.all(promises).then(results => {
+            sequence(promises).then(results => {
 
                 let balance = results[0];
                 let orders = results[1].orders;
@@ -48,82 +45,41 @@ module.exports = (function() {
                 let exchangePosition = positions[0];
                 let size = Math.round((balance / strategyOptions.installments) * 100) / 100; size = '0.002'; // For testing
                 let idle = !orders.length && !positions.length && !incompleteOrders.length;
+                let inSync = openPositionsFromDb.length === 1 && positions.length === 1 && exchangePosition.pair === dbPosition.pair;
 
                 if ( idle ){
-                    if (signal.short){
-                        db.savePosition(strategyOptions.installments, size, pair, 'sell').then(order => {
-                            exchange.placeTradesWithDbOrders().then(resolve).catch(reject);
-                        }).catch(reject);
-                    }
-                    else if(signal.long){
-                        db.savePosition(strategyOptions.installments, size, pair, 'buy').then(order => {
+                    if (signal.short || signal.long){
+                        db.savePosition(strategyOptions.installments, size, pair, (signal.long ? 'buy': 'sell')).then(order => {
                             exchange.placeTradesWithDbOrders().then(resolve).catch(reject);
                         }).catch(reject);
                     }
                 }
-                else {
-
-                    let inSync = openPositionsFromDb.length === 1 && positions.length === 1 && exchangePosition.pair === dbPosition.pair;
-
-                    if ( inSync ) {
-
-                        db.getOrdersByPositionId(dbPosition.id).then(dbOrders => {
-
-                            let timeToAdd = !(strategyOptions.topupOffset % ticker);
-                            let inProfit = parseFloat(exchangePosition.profit) > 0;
-                            let addToLong = signal.long && exchangePosition.side === 'buy' && dbOrders.length !== dbPosition.installments && timeToAdd && inProfit;
-                            let addToShort = signal.short && exchangePosition.side === 'sell' && dbOrders.length !== dbPosition.installments && timeToAdd && inProfit;
-                            let closeLong = signal.closeLong && exchangePosition.side === 'buy';
-                            let closeShort = signal.closeShort && exchangePosition.side === 'sell';
-
-                            if ( addToLong ){
-
-                                let index = dbOrders.length;
-                                let amount = dbPosition.size * (index + 1);
-
-                                db.saveOrder(amount, pair, dbPosition.id).then(order => {
-                                    exchange.placeTradesWithDbOrders().then(resolve).catch(reject);
+                else if (inSync){
+                    db.getOrdersByPositionId(dbPosition.id).then(dbOrders => {
+                        let timeToAdd = !(strategyOptions.topupOffset % ticker);
+                        let inProfit = parseFloat(exchangePosition.profit) > 0;
+                        let addToLong = signal.long && exchangePosition.side === 'buy' && dbOrders.length !== dbPosition.installments && timeToAdd && inProfit && signal.addToLong;
+                        let addToShort = signal.short && exchangePosition.side === 'sell' && dbOrders.length !== dbPosition.installments && timeToAdd && inProfit && signal.addToLong;
+                        let closeLong = signal.closeLong && exchangePosition.side === 'buy';
+                        let closeShort = signal.closeShort && exchangePosition.side === 'sell';
+                        if ( addToLong || addToShort ){
+                            let index = dbOrders.length;
+                            let amount = dbPosition.size * (index + 1) * (dbPosition.side === 'buy' ? 1 : -1);
+                            db.saveOrder(amount, pair, dbPosition.id).then(order => {
+                                exchange.placeTradesWithDbOrders().then(resolve('Added ' + size + ' to ' + pair + ' ' + (addToLong ? 'long': 'short') + ' for a total of ' + amount)).catch(reject);
+                            }).catch(reject);
+                        }
+                        else if ( closeLong || closeShort ){
+                            db.saveOrder('0.0', pair, dbPosition.id).then(order => {
+                                exchange.placeTradesWithDbOrders().then(() =>{
+                                    db.markPositionDone(dbPosition.id).then(resolve('Closing ' + (closeLong ? 'long': 'short') + ' for a ' + (exchangePosition.profit > 0 ? 'profit' : 'loss') + ' of ' + exchangePosition.profit)).catch(reject);
                                 }).catch(reject);
-
-                            }
-                            else if ( addToShort ){
-
-                                let index = dbOrders.length;
-                                let amount = dbPosition.size * (index + 1) * -1;
-
-                                db.saveOrder(amount, pair, dbPosition.id).then(order => {
-                                    exchange.placeTradesWithDbOrders().then(resolve).catch(reject);
-                                }).catch(reject);
-
-                            }
-                            else if ( closeLong ){
-
-                                db.saveOrder('0.0', pair, dbPosition.id).then(order => {
-                                    exchange.placeTradesWithDbOrders().then(() =>{
-                                        db.markPositionDone(dbPosition.id).then(resolve).catch(reject);
-                                    }).catch(reject);
-                                }).catch(reject);
-
-                            }
-                            else if ( closeShort ) {
-
-                                db.saveOrder('0.0', pair, dbPosition.id).then(order => {
-                                    exchange.placeTradesWithDbOrders().then(() =>{
-                                        db.markPositionDone(dbPosition.id).then(resolve).catch(reject);
-                                    }).catch(reject);
-                                }).catch(reject);
-
-                            }
-                            else {
-
-                                logger.log('Still ' + (dbPosition.side === 'buy' ? 'long' : 'short') + ' ' + exchangePosition.amount + ' ' + exchangePosition.pair);
-
-                            }
-                        }).catch(reject);
-                    }
-                    else {
-                        reject('Cannot process multiple open positions');
-                    }
+                            }).catch(reject);
+                        }
+                        else {
+                            logger.log('Still ' + (dbPosition.side === 'buy' ? 'long' : 'short') + ' ' + exchangePosition.amount + ' ' + exchangePosition.pair);
+                        }
+                    }).catch(reject);
                 }
             }).catch(reject);
         })
