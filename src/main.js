@@ -15,6 +15,8 @@ module.exports = (function() {
         exchange:   null,
         terminal:   null,
         toolkit:    null,
+        signaller:  null,
+        strategy:   null
     };
 
     (function init(){
@@ -29,6 +31,18 @@ module.exports = (function() {
                 .then(initExchange)
                 .then(initToolkit)
                 .then(initUi)
+                .then(console.log)
+                .catch(console.error)
+        }
+        if(commandLineArg === 'test'){
+            initIo()
+                .then()
+                .then(initTelegram)
+                .then(initLogger)
+                .then(initDb)
+                .then(initExchange)
+                .then(initSignaller)
+                .then(initStrategy)
                 .then(console.log)
                 .catch(console.error)
         }
@@ -136,16 +150,31 @@ module.exports = (function() {
                 features.exchange.init(configKeys, features.logger, features.db).then(resolve).catch(reject);
             }
             else {
-                resolve('Missing exchange options from npm command');
+                reject('Missing exchange options from npm command');
             }
         })
     }
 
+    function initSignaller(){
+        console.info('initSignaller');
+        return new Promise((resolve, reject) => {
+            features.signaller = require('./signaller');
+            features.signaller.init(features.exchange, features.logger).then(resolve).catch(reject);
+        });
+    }
+
+    function initStrategy(){
+        console.info('initStrategy');
+        let stratOpts = config.strategy;
+        return new Promise((resolve, reject) => {
+            features.strategy = require('./strategy');
+            features.strategy.init(features.exchange, features.logger, stratOpts, features.signaller, features.db).then(resolve).catch(reject);
+        });
+    }
+
     function initTelegramActions(){
         console.info('initTelegramActions');
-        return new Promise((resolve) => {
-            features.telegram.initActions(features.exchange).then(resolve);
-        })
+        return features.telegram.initActions(features.exchange);
     }
 
     function initToolkit(){

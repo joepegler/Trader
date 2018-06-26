@@ -11,57 +11,78 @@ module.exports = (function(){
 
     let ws, rest, db, logger; // APIs & DB
 
-    function _getOrders(){
+    function _getCandles(pair, timeframe, limit){
+        logger.log('_getCandles');
+        return new Promise((resolve, reject) => {
+            rest.candles({ timeframe: timeframe, symbol: 't' + pair.toUpperCase(), section: 'hist', query: { limit: limit } }, (err, _candles) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(_candles.reverse());
+            });
+        })
+    }
+
+    function _getOrders(pair){
         logger.log('getOrders');
         return new Promise((resolve, reject) => {
             rest.activeOrders((err, orders) => {
                 if (err) {
                     reject(err);
-                    return;
                 }
-                orders = orders.map(order => {
-                    return {
-                        id: order[0],
-                        pair: order[3].substring(1),
-                        ts: moment(order[4]).format('YYYY-MM-DD HH:mm:ss.SSSSSS'),
-                        amount: Math.abs(order[6]),
-                        status: order[13],
-                        side: parseFloat(order[6]) > 0 ? 'buy' : 'sell',
-                    };
-                });
-                resolve(orders);
+                else {
+                    orders = orders.map(order => {
+                        return {
+                            id: order[0],
+                            pair: order[3].substring(1),
+                            ts: moment(order[4]).format('YYYY-MM-DD HH:mm:ss.SSSSSS'),
+                            amount: Math.abs(order[6]),
+                            status: order[13],
+                            side: parseFloat(order[6]) > 0 ? 'buy' : 'sell',
+                        };
+                    });
+                    if (pair){
+                        orders.filter(order => {return order.pair.toLowerCase() === pair.toLowerCase()});
+                    }
+                    resolve(orders);
+                }
             });
         })
     }
 
-    function _getPositions(){
+    function _getPositions(pair){
         logger.log('getPositions');
         return new Promise((resolve, reject) => {
             rest.positions((err, positions) => {
                 if (err) {
                     reject(err);
-                    return;
                 }
-                positions = positions.map(position => {
-                    return {
-                        pair: position[0].substring(1),
-                        amount: position[2],
-                        side: parseFloat(position[2]) > 0 ? 'buy' : 'sell',
-                        base: position[3],
-                        funding: position[4],
-                        profit: position[6]
+                else {
+                    positions = positions.map(position => {
+                        return {
+                            pair: position[0].substring(1),
+                            amount: position[2],
+                            side: parseFloat(position[2]) > 0 ? 'buy' : 'sell',
+                            base: position[3],
+                            funding: position[4],
+                            profit: position[6]
+                        }
+                    });
+                    if (pair){
+                        positions.filter(position => {return position.pair.toLowerCase() === pair.toLowerCase() });
                     }
-                });
-                resolve(positions);
+                    resolve(positions);
+                }
             });
         })
     }
 
-    function _getState(){
+    function _getState(pair){
         logger.log('getState');
         return new Promise((resolve, reject) => {
-            _getPositions().then(positions => {
-                _getOrders().then(orders => {
+            _getPositions(pair).then(positions => {
+                _getOrders(pair).then(orders => {
                     resolve({
                         positions: positions,
                         orders: orders
@@ -71,15 +92,24 @@ module.exports = (function(){
         })
     }
 
-    function _getBalance(){
+    function _getBalance(symbol){
         logger.log('_getBalance');
         return new Promise((resolve, reject) => {
-            rest.balances((err, balances) => {
+            rest.ticker('t' + symbol, (err, res) => {
                 if (err) {
                     reject(err);
-                    return;
                 }
-                resolve(balances);
+                else {
+                    let price = ((res[0] + res[2]) / 2);
+                    rest.calcAvailableBalance('t' + symbol, 1, price, 'MARGIN', (err, balance) => {
+                        if (err) {
+                            reject(err);
+                        }
+                        else {
+                            resolve(balance[0]);
+                        }
+                    });
+                }
             });
         })
     }
@@ -132,36 +162,40 @@ module.exports = (function(){
             rest = bfx2.rest();
             ws.on('error', logger.log);
             ws.on('open', ws.auth.bind(ws));
-            ws.once('auth', resolve);
+            // ws.once('auth', resolve);
+            resolve();
             ws.open();
         });
 
     }
 
-    function _matchPositionsWithSignals(){
-        logger.log('matchPositionsWithSignals');
-        let signalsAndState = [db.getIncompleteSignals(), _getState()];
-        Promise.all(signalsAndState).then(results => {
-            let signals = results[0];
-            let state = results[1];
-            let orders = signals.map(signal => {
-                let matchingPosition = _.find(state.positions, {pair: signal.pair});
-                if (matchingPosition) {
-                    let remainingAmount = parseFloat(signal.amount) - parseFloat(matchingPosition.amount);
-                    if (remainingAmount !== 0) {
-                        logger.log('matchPositionsWithSignals success: ' + JSON.stringify(signal));
-                        return _order(signal.pair, remainingAmount.toString(), signal.id);
+    function _placeTradesWithDbOrders(){
+        return new Promise((resolve, reject) => {
+            logger.log('placeTradesWithDbOrders');
+            let ordersAndState = [db.getincompleteOrders(), _getState()];
+            Promise.all(ordersAndState).then(results => {
+                let incompleteOrders = results[0];
+                let positions = results[1].positions;
+                let openOrders = results[1].orders;
+                let orderPromises = incompleteOrders.map(order => {
+                    let matchingPosition = _.find(positions, {pair: order.pair});
+                    if (matchingPosition) {
+                        let remainingAmount = parseFloat(order.amount) - parseFloat(matchingPosition.amount);
+                        if (remainingAmount !== 0) {
+                            logger.log('placeTradesWithDbOrders success: ' + JSON.stringify(order));
+                            return _order(order.pair, remainingAmount.toString(), order.id);
+                        }
+                        else {
+                            return db.markOrderDone(order.id);
+                        }
                     }
                     else {
-                        return db.markSignalDone(signal.id);
+                        logger.log('placeTradesWithDbOrders success: ' + JSON.stringify(order));
+                        return _order(order.pair, parseFloat(order.amount), order.id);
                     }
-                }
-                else {
-                    logger.log('matchPositionsWithSignals success: ' + JSON.stringify(signal));
-                    return _order(signal.pair, parseFloat(signal.amount), signal.id);
-                }
-            });
-            Promise.all(orders).then(resolve).catch(reject);
+                });
+                Promise.all(orderPromises).then(resolve).catch(reject);
+            }).catch(reject);
         })
     }
 
@@ -170,8 +204,9 @@ module.exports = (function(){
         getState: _getState,
         getPositions: _getPositions,
         getOrders: _getOrders,
+        getCandles: _getCandles,
         getBalance: _getBalance,
-        matchPositionsWithSignals: _matchPositionsWithSignals,
+        placeTradesWithDbOrders: _placeTradesWithDbOrders,
         init: _init
     }
 

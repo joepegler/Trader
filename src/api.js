@@ -43,9 +43,9 @@ module.exports = (function() {
                 let amount = req.body.amount;
 
                 if (pair && amount){
-                    db.saveSignal(amount, pair).then(signal => {
+                    db.saveOrder(amount, pair).then(signal => {
                         res.status(200).send({data: 'Signal saved: ' + signal});
-                        exchange.matchPositionsWithSignals().then(logger.log).catch(logger.error);
+                        exchange.placeTradesWithDbOrders().then(logger.log).catch(logger.error);
                     }).catch(err => {
                         logger.error(err);
                         res.status(500).send({error: err});
