@@ -8,6 +8,7 @@ module.exports = (function(){
     const moment = require('moment');
     const _ = require('lodash');
     const config = require('./config');
+    const sequence = require('promise-sequence');
 
     let ws, rest, db, logger; // APIs & DB
 
@@ -172,8 +173,8 @@ module.exports = (function(){
     function _placeTradesWithDbOrders(){
         return new Promise((resolve, reject) => {
             logger.log('placeTradesWithDbOrders');
-            let ordersAndState = [db.getincompleteOrders(), _getState()];
-            Promise.all(ordersAndState).then(results => {
+            let ordersAndState = [db.getIncompleteOrders(), _getState()];
+            sequence(ordersAndState).then(results => {
                 let incompleteOrders = results[0];
                 let positions = results[1].positions;
                 let openOrders = results[1].orders;
@@ -194,7 +195,7 @@ module.exports = (function(){
                         return _order(order.pair, parseFloat(order.amount), order.id);
                     }
                 });
-                Promise.all(orderPromises).then(resolve).catch(reject);
+                sequence(orderPromises).then(resolve).catch(reject);
             }).catch(reject);
         })
     }
