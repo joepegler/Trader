@@ -13,8 +13,7 @@ module.exports = (function() {
             exchange = _exchange;
             logger = _logger;
             strategyOptions = _strategyOptions;
-            // setInterval(execute, 1000 * 60 * 60); // Every hour
-            execute();
+            setInterval(execute, 1000 * 60 * 5); // Every hour
             resolve('Initiated strategy');
         });
     }
@@ -65,12 +64,12 @@ module.exports = (function() {
                         if ( addToLong || addToShort ){
                             let index = dbOrders.length;
                             let amount = dbPosition.size * (index + 1) * (dbPosition.side === 'buy' ? 1 : -1);
-                            db.saveOrder(amount, pair, dbPosition.id).then(order => {
+                            db.saveOrder(amount, pair, dbPosition.id).then(() => {
                                 exchange.placeTradesWithDbOrders().then(resolve('Added ' + size + ' to ' + pair + ' ' + (addToLong ? 'long': 'short') + ' for a total of ' + amount)).catch(reject);
                             }).catch(reject);
                         }
                         else if ( closeLong || closeShort ){
-                            db.saveOrder('0.0', pair, dbPosition.id).then(order => {
+                            db.saveOrder('0.0', pair, dbPosition.id).then(() => {
                                 exchange.placeTradesWithDbOrders().then(() =>{
                                     db.markPositionDone(dbPosition.id).then(resolve('Closing ' + (closeLong ? 'long': 'short') + ' for a ' + (exchangePosition.profit > 0 ? 'profit' : 'loss') + ' of ' + exchangePosition.profit)).catch(reject);
                                 }).catch(reject);
