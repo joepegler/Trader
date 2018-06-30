@@ -5,7 +5,6 @@ module.exports = (function() {
     const _ = require('lodash');
     const moment = require('moment');
     const tulind = require('tulind');
-    const sequence = require('promise-sequence');
 
     let exchange, logger, indicatorOptions, marketData = { ts:[], open:[], close: [], high: [], low: [], volume: [] };
 
@@ -80,7 +79,7 @@ module.exports = (function() {
                 rsi(14),
                 rsi(14, indicatorOptions.topupOffset)
             ];
-            return sequence(indicators).then(indctrs => {
+            return Promise.all(indicators).then(indctrs => {
                 let ema8 = indctrs[0];
                 let ema13 = indctrs[1];
                 let ema21 = indctrs[2];

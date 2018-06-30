@@ -34,15 +34,15 @@ module.exports = (function() {
                 .then(console.log)
                 .catch(console.error)
         }
-        if(commandLineArg === 'test'){
+        if(commandLineArg === 'api'){
             initIo()
                 .then()
                 .then(initTelegram)
                 .then(initLogger)
                 .then(initDb)
                 .then(initExchange)
-                .then(initSignaller)
-                .then(initStrategy)
+                .then(initTelegramActions)
+                .then(initApi)
                 .then(console.log)
                 .catch(console.error)
         }
@@ -73,8 +73,8 @@ module.exports = (function() {
                 .then(initLogger)
                 .then(initDb)
                 .then(initExchange)
-                .then(initTelegramActions)
-                .then(initApi)
+                .then(initSignaller)
+                .then(initStrategy)
                 .then(console.log)
                 .catch(console.error)
         }

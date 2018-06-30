@@ -11,7 +11,7 @@ module.exports = (function(){
         return new Promise((resolve, reject) => {
             const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
             const values = [parseFloat(amount) > 0 ? 'buy' : 'sell', amount.toString(), 'NOW()', pair, 'false', positionId];
-            client.query(text, values).then(dbResponse => {
+            client.query(text, values).then(() => {
                 resolve(values)
             }).catch(reject);
         });
@@ -81,7 +81,7 @@ module.exports = (function(){
             const text = 'INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
             const values = Object.values(trade);
             client.query(text, values).then(() => {
-                _markOrderDone(trade.order).then(() => resolve(trade)).catch(reject);
+                _markOrderDone(trade['order_id']).then(() => resolve(trade)).catch(reject);
             });
         });
     }

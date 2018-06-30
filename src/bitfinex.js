@@ -7,10 +7,42 @@ module.exports = (function(){
     const Promise = require('promise');
     const moment = require('moment');
     const _ = require('lodash');
-    const config = require('./config');
-    const sequence = require('promise-sequence');
 
-    let ws, rest, db, logger; // APIs & DB
+    let ws, rest, db, logger;
+
+    function _init(configKeys, _logger, _db){
+        db = _db;
+        logger = _logger;
+        return new Promise((resolve, reject) => {
+            let enableWebsocket = configKeys.websocket.key && configKeys.websocket.secret;
+            let enableRest = configKeys.rest.key && configKeys.rest.secret;
+            if(enableWebsocket){
+                const bfx = new BFX({
+                    apiKey: configKeys.websocket.key,
+                    apiSecret: configKeys.websocket.secret,
+                    ws: {
+                        autoReconnect: true,
+                        seqAudit: true,
+                        packetWDDelay: 10 * 1000
+                    }
+                });
+                ws = bfx.ws();
+                ws.on('error', logger.log);
+                ws.on('open', ws.auth.bind(ws));
+                // ws.once('auth', logger.log);
+                ws.open();
+            }
+            if (enableRest){
+                const bfx2 = new BFX({
+                    apiKey: configKeys.rest.key,
+                    apiSecret: configKeys.rest.secret,
+                });
+                rest = bfx2.rest();
+            }
+            resolve();
+        });
+
+    }
 
     function _getCandles(pair, timeframe, limit){
         logger.log('_getCandles');
@@ -46,6 +78,7 @@ module.exports = (function(){
                     if (pair){
                         orders.filter(order => {return order.pair.toLowerCase() === pair.toLowerCase()});
                     }
+                    logger.log('got orders');
                     resolve(orders);
                 }
             });
@@ -60,6 +93,7 @@ module.exports = (function(){
                     reject(err);
                 }
                 else {
+                    logger.log('got positions');
                     positions = positions.map(position => {
                         return {
                             pair: position[0].substring(1),
@@ -115,7 +149,7 @@ module.exports = (function(){
         })
     }
 
-    function _order(pair, amount, signalId){
+    function _order(pair, amount, orderId){
         logger.log('order');
         return new Promise((resolve, reject) => {
             const o = new Order({
@@ -129,7 +163,7 @@ module.exports = (function(){
                 let order = o.serialize();
                 let trade = {
                     id: order[0],
-                    signal: signalId,
+                    order_id: orderId,
                     pair: order[3].substring(1),
                     ts: moment(order[2]).format('YYYY-MM-DD HH:mm:ss.SSSSSS'),
                     amount: Math.abs(order[7]),
@@ -142,39 +176,11 @@ module.exports = (function(){
         })
     }
 
-    function _init(configKeys, _logger, _db){
-        return new Promise((resolve, reject) => {
-            const bfx = new BFX({
-                apiKey: configKeys.websocket.key,
-                apiSecret: configKeys.websocket.secret,
-                ws: {
-                    autoReconnect: true,
-                    seqAudit: true,
-                    packetWDDelay: 10 * 1000
-                }
-            });
-            const bfx2 = new BFX({
-                apiKey: configKeys.rest.key,
-                apiSecret: configKeys.rest.secret,
-            });
-            db = _db;
-            logger = _logger;
-            ws = bfx.ws();
-            rest = bfx2.rest();
-            ws.on('error', logger.log);
-            ws.on('open', ws.auth.bind(ws));
-            // ws.once('auth', resolve);
-            resolve();
-            ws.open();
-        });
-
-    }
-
     function _placeTradesWithDbOrders(){
         return new Promise((resolve, reject) => {
             logger.log('placeTradesWithDbOrders');
             let ordersAndState = [db.getIncompleteOrders(), _getState()];
-            sequence(ordersAndState).then(results => {
+            Promise.all(ordersAndState).then(results => {
                 let incompleteOrders = results[0];
                 let positions = results[1].positions;
                 let openOrders = results[1].orders;
@@ -195,7 +201,7 @@ module.exports = (function(){
                         return _order(order.pair, parseFloat(order.amount), order.id);
                     }
                 });
-                sequence(orderPromises).then(resolve).catch(reject);
+                Promise.all(orderPromises).then(resolve).catch(reject);
             }).catch(reject);
         })
     }
