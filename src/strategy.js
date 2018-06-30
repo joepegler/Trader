@@ -47,7 +47,7 @@ module.exports = (function() {
                                 else if (activeAndInSync){
                                     db.getOrdersByPositionId(dbPosition.id).then(dbOrders => {
                                         let timeToAdd = !(strategyOptions.topupOffset % ticker);
-                                        let inProfit = parseFloat(exchangePosition.profit) > 0;
+                                        let inProfit = exchangePosition && parseFloat(exchangePosition.profit) > 0;
                                         let addToLong = signal.long && exchangePosition.side === 'buy' && dbOrders.length !== dbPosition.installments && timeToAdd && inProfit && signal.addToLong;
                                         let addToShort = signal.short && exchangePosition.side === 'sell' && dbOrders.length !== dbPosition.installments && timeToAdd && inProfit && signal.addToLong;
                                         let closeLong = signal.closeLong && exchangePosition.side === 'buy';
@@ -68,10 +68,6 @@ module.exports = (function() {
                                         }
                                     }).catch(reject);
                                 }
-                                else {
-                                    logger.log('Still ' + (dbPosition.side === 'buy' ? 'long' : 'short') + ' ' + exchangePosition.amount + ' ' + exchangePosition.pair);
-                                }
-
                             }).catch(reject);
                         }).catch(reject);
                     }).catch(reject);

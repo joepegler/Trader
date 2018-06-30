@@ -87,7 +87,7 @@ module.exports = (function(){
     }
 
     function _init(dbConfig){
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             client = new Client(dbConfig);
             client.connect();
             resolve('Connected to db');
