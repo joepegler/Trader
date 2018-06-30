@@ -21,7 +21,6 @@
     "opn": "^5.2.0",
     "pg": "^7.4.2",
     "promise": "^8.0.1",
-    "promise-sequence": "^0.3.1",
     "prompt": "^1.0.0",
     "socket.io": "^2.0.4",
     "tulind": "^0.8.10"

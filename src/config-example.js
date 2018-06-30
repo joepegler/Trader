@@ -29,8 +29,11 @@ module.exports = {
     strategy : {
         installments: 3,
         topupOffset: 5,
-        timeframe: '1h',
-        maxLookback: 55
+        timeframe: {
+            duration: '5m',
+            ms: 1000 * 60 * 5
+        },
+        maxLookback: 100
     },
     api: {
         port: 0,
