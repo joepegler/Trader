@@ -7,10 +7,10 @@ module.exports = (function(){
     const { Client } = require('pg');
     let client;
 
-    function _saveOrder(amount, pair, positionId){
+    function _saveOrder(amount, pair, positionId, side){
         return new Promise((resolve, reject) => {
             const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
-            const values = [parseFloat(amount) > 0 ? 'buy' : 'sell', amount.toString(), 'NOW()', pair, 'false', positionId];
+            const values = [side, amount.toString(), 'NOW()', pair, 'false', positionId];
             client.query(text, values).then(() => {
                 resolve(values)
             }).catch(reject);
@@ -23,8 +23,8 @@ module.exports = (function(){
             const values = [installments, size, pair, 'NOW()', 'false', side];
             client.query(text, values).then(dbResponse => {
                 let positionId = dbResponse.rows[0].id;
-                let amount = side === 'sell' ? -size : size;
-                _saveOrder(amount, pair, positionId).then(resolve).catch(reject);
+                let amount = parseFloat(size);
+                _saveOrder(amount, pair, positionId, side).then(resolve).catch(reject);
             }).catch(reject);
         });
     }
@@ -69,10 +69,10 @@ module.exports = (function(){
         });
     }
 
-    function _markPositionDone(positionId){
+    function _markPositionDone(positionId, profit){
         return new Promise((resolve, reject) => {
-            const text = 'UPDATE positions SET done = TRUE WHERE ID = $1';
-            client.query(text, [positionId]).then(dbResponse => resolve(positionId)).catch(reject);
+            const text = 'UPDATE positions SET done = TRUE, profit = $1 WHERE ID = $2';
+            client.query(text, [profit, positionId]).then(dbResponse => resolve(positionId)).catch(reject);
         });
     }
 

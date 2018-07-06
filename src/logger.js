@@ -17,14 +17,14 @@ module.exports = (function() {
             });
         },
         log: (messageOne, messageTwo, important) => {
-            let msg = '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + '] ';
+            let msg = '';
             if (typeof messageOne === 'object') {
                 msg += JSON.stringify(messageOne, null, 2);
             }
             else {
                 msg += messageOne;
             }
-            textFile && fs.appendFileSync('./' + textFile + '.txt', msg);
+            textFile && fs.appendFileSync('./' + textFile + '.txt', '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + ']' + msg);
             msg = msg.replace('\n', '');
             important && telegram && telegram.sendMessage(msg);
             console.log(msg);
@@ -32,7 +32,7 @@ module.exports = (function() {
             if (messageTwo) logger.log(messageTwo, null, important);
         },
         error: (errorOne, errorTwo) => {
-            let msg = '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + '] ERROR - ';
+            let msg = 'ERROR - ';
             if (typeof errorOne === 'object') {
                 if (errorOne instanceof Error) {
                     msg += errorOne.message;
@@ -44,7 +44,7 @@ module.exports = (function() {
             else {
                 msg += errorOne;
             }
-            textFile && fs.appendFileSync('./' + textFile + '.txt', msg);
+            textFile && fs.appendFileSync('./' + textFile + '.txt', '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + '] ' + msg);
             msg = msg.replace('\n', '');
             telegram && telegram.sendMessage(msg);
             console.error(msg);

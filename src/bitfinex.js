@@ -165,7 +165,7 @@ module.exports = (function(){
                     pair: order[3].substring(1),
                     ts: moment(order[2]).format('YYYY-MM-DD HH:mm:ss.SSSSSS'),
                     amount: Math.abs(order[7]),
-                    side: parseFloat(order[6]) > 0 ? 'buy' : 'sell',
+                    side: parseFloat(order[7]) > 0 ? 'buy' : 'sell'
                 };
                 logger.log('Order success: ' + JSON.stringify(trade, null, 2));
                 db.saveTrade(trade).then(resolve).catch(reject);
@@ -183,11 +183,11 @@ module.exports = (function(){
                 let positions = results[1].positions;
                 let openOrders = results[1].orders;
                 let orderPromises = incompleteOrders.map(order => {
+                    let orderAmount = order.side === 'buy' ? parseFloat(order.amount) : order.side === 'sell' ? (parseFloat(order.amount) * -1) : 0;
                     let matchingPosition = _.find(positions, {pair: order.pair});
                     if (matchingPosition) {
-                        let remainingAmount = parseFloat(order.amount) - parseFloat(matchingPosition.amount);
+                        let remainingAmount = parseFloat(orderAmount) - parseFloat(matchingPosition.amount);
                         if (remainingAmount !== 0) {
-                            logger.log('placeTradesWithDbOrders success: ' + JSON.stringify(order));
                             return _order(order.pair, remainingAmount.toString(), order.id);
                         }
                         else {
@@ -195,8 +195,7 @@ module.exports = (function(){
                         }
                     }
                     else {
-                        logger.log('placeTradesWithDbOrders success: ' + JSON.stringify(order));
-                        return _order(order.pair, parseFloat(order.amount), order.id);
+                        return _order(order.pair, orderAmount, order.id);
                     }
                 });
                 Promise.all(orderPromises).then(resolve).catch(reject);
