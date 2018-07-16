@@ -40,7 +40,7 @@ module.exports = (function() {
                                 if ( idle ){
                                     if (signal.short || signal.long){
                                         logger.log('Going ' + (signal.long ? 'long' : 'short') + ' ' + size + ' ' + pair);
-                                        db.savePosition(strategyOptions.installments, size, pair, (signal.long ? 'buy': 'sell')).then(() => {
+                                        db.savePositionAndOrder(strategyOptions.installments, size, pair, (signal.long ? 'buy': 'sell')).then(() => {
                                             exchange.placeTradesWithDbOrders().then(resolve).catch(reject);
                                             ticker = 0;
                                         }).catch(reject);

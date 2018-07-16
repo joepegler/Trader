@@ -8,25 +8,22 @@ module.exports = (function(){
     let client;
 
     function _saveOrder(amount, pair, positionId, side){
-        return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
-            const values = [side, amount.toString(), 'NOW()', pair, 'false', positionId];
-            client.query(text, values).then(() => {
-                resolve(values)
-            }).catch(reject);
-        });
+        const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
+        const values = [side, amount.toString(), 'NOW()', pair, 'false', positionId];
+        return client.query(text, values);
+    }
+
+    async function _savePositionAndOrder(installments, size, pair, side){
+        let savedPosition = await _savePosition(installments, size, pair, side);
+        let positionId = savedPosition.rows[0].id;
+        let amount = parseFloat(size);
+        return await _saveOrder(amount, pair, positionId, side);
     }
 
     function _savePosition(installments, size, pair, side){
-        return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO positions(installments, size, pair, ts, done, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING id';
-            const values = [installments, size, pair, 'NOW()', 'false', side];
-            client.query(text, values).then(dbResponse => {
-                let positionId = dbResponse.rows[0].id;
-                let amount = parseFloat(size);
-                _saveOrder(amount, pair, positionId, side).then(resolve).catch(reject);
-            }).catch(reject);
-        });
+        const text = 'INSERT INTO positions(installments, size, pair, ts, done, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING id';
+        const values = [installments, size, pair, 'NOW()', 'false', side];
+        return client.query(text, values);
     }
 
     function _getIncompleteOrders(pair){
@@ -96,6 +93,7 @@ module.exports = (function(){
 
     return {
         saveOrder: _saveOrder,
+        savePositionAndOrder: _savePositionAndOrder,
         savePosition: _savePosition,
         markOrderDone: _markOrderDone,
         markPositionDone: _markPositionDone,
