@@ -112,8 +112,10 @@ module.exports = (function() {
                 let short = EMABearEntry && RSIBearEntry;
                 let closeLong = RSIBullExit || EMABullExit;
                 let closeShort = RSIBearExit || EMABearExit;
-                let addToLong = EMABullAddon && RSIBullAddon;
-                let addToShort = EMABearAddon && RSIBearAddon;
+                let addToLong = long && EMABullAddon && RSIBullAddon;
+                let addToShort = short && EMABearAddon && RSIBearAddon;
+
+                logger.log('[RSI] ' + rsi + '\n\n' + '[EMA 8] ' + ema8 + '\n' + '[EMA 13] ' + ema13 + '\n' + '[EMA 21] ' + ema21 + '\n' + '[EMA 34] ' + ema34 + '\n' + '[EMA 55] ' + ema55, null, true);
 
                 let signal = { long, short, closeLong, closeShort, addToLong, addToShort };
 

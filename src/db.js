@@ -7,26 +7,23 @@ module.exports = (function(){
     const { Client } = require('pg');
     let client;
 
-    function _saveOrder(amount, pair, positionId){
-        return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
-            const values = [parseFloat(amount) > 0 ? 'buy' : 'sell', amount.toString(), 'NOW()', pair, 'false', positionId];
-            client.query(text, values).then(() => {
-                resolve(values)
-            }).catch(reject);
-        });
+    function _saveOrder(amount, pair, positionId, side){
+        const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
+        const values = [side, amount.toString(), 'NOW()', pair, 'false', positionId];
+        return client.query(text, values);
+    }
+
+    async function _savePositionAndOrder(installments, size, pair, side){
+        let savedPosition = await _savePosition(installments, size, pair, side);
+        let positionId = savedPosition.rows[0].id;
+        let amount = parseFloat(size);
+        return await _saveOrder(amount, pair, positionId, side);
     }
 
     function _savePosition(installments, size, pair, side){
-        return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO positions(installments, size, pair, ts, done, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING id';
-            const values = [installments, size, pair, 'NOW()', 'false', side];
-            client.query(text, values).then(dbResponse => {
-                let positionId = dbResponse.rows[0].id;
-                let amount = side === 'sell' ? -size : size;
-                _saveOrder(amount, pair, positionId).then(resolve).catch(reject);
-            }).catch(reject);
-        });
+        const text = 'INSERT INTO positions(installments, size, pair, ts, done, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING id';
+        const values = [installments, size, pair, 'NOW()', 'false', side];
+        return client.query(text, values);
     }
 
     function _getIncompleteOrders(pair){
@@ -69,10 +66,10 @@ module.exports = (function(){
         });
     }
 
-    function _markPositionDone(positionId){
+    function _markPositionDone(positionId, profit){
         return new Promise((resolve, reject) => {
-            const text = 'UPDATE positions SET done = TRUE WHERE ID = $1';
-            client.query(text, [positionId]).then(dbResponse => resolve(positionId)).catch(reject);
+            const text = 'UPDATE positions SET done = TRUE, profit = $1 WHERE ID = $2';
+            client.query(text, [profit, positionId]).then(dbResponse => resolve(positionId)).catch(reject);
         });
     }
 
@@ -87,7 +84,7 @@ module.exports = (function(){
     }
 
     function _init(dbConfig){
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             client = new Client(dbConfig);
             client.connect();
             resolve('Connected to db');
@@ -96,6 +93,7 @@ module.exports = (function(){
 
     return {
         saveOrder: _saveOrder,
+        savePositionAndOrder: _savePositionAndOrder,
         savePosition: _savePosition,
         markOrderDone: _markOrderDone,
         markPositionDone: _markPositionDone,

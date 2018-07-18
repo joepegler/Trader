@@ -31,7 +31,6 @@ module.exports = (function() {
                 .then(initExchange)
                 .then(initToolkit)
                 .then(initUi)
-                .then(console.log)
                 .catch(console.error)
         }
         if(commandLineArg === 'api'){
@@ -43,7 +42,6 @@ module.exports = (function() {
                 .then(initExchange)
                 .then(initTelegramActions)
                 .then(initApi)
-                .then(console.log)
                 .catch(console.error)
         }
         else if(process.argv[2] === 'dev') {
@@ -53,7 +51,6 @@ module.exports = (function() {
                 .then(initExchange)
                 .then(initToolkit)
                 .then(initTerminal)
-                .then(console.log)
                 .catch(console.error)
         }
         else if(commandLineArg === 'apitest') {
@@ -63,7 +60,6 @@ module.exports = (function() {
                 .then(initDb)
                 .then(initExchange)
                 .then(initApi)
-                .then(console.log)
                 .catch(console.error)
         }
         else {
@@ -75,7 +71,6 @@ module.exports = (function() {
                 .then(initExchange)
                 .then(initSignaller)
                 .then(initStrategy)
-                .then(console.log)
                 .catch(console.error)
         }
 
