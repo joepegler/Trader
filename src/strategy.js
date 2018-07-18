@@ -85,7 +85,6 @@ module.exports = (function() {
             // Not idle
             else {
 
-                // There are open positions and they match with
                 if (activeAndInSync) {
 
                     // Database orders
@@ -130,6 +129,8 @@ module.exports = (function() {
 
                         // Log to telegram
                         logger.log(databaseTrade, null, true);
+
+                        // Reset the ticker
                         ticker = 0;
 
                     }
@@ -149,6 +150,8 @@ module.exports = (function() {
                         message = 'Closing ' + (exchangePosition.side === 'buy' ? 'long' : 'short') + ' for a ' + (exchangePosition.profit > 0 ? 'profit' : 'loss') + ' of ' + exchangePosition.profit;
                         logger.log(message, null, true);
                         logger.log(databaseTrade, null, true);
+
+                        // Reset the ticker
                         ticker = 0;
                     }
                 }
