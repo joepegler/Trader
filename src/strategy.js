@@ -70,6 +70,7 @@ module.exports = (function() {
 
             // Idle
             if (idle) {
+
                 if (signal.short || signal.long) {
 
                     let dbOrder = await db.savePositionAndOrder(strategyOptions.installments, size, pair, (signal.long ? 'buy' : 'sell'));
@@ -154,6 +155,9 @@ module.exports = (function() {
                         // Reset the ticker
                         ticker = 0;
                     }
+                }
+                else {
+                    logger.error("Not in sync");
                 }
             }
         }
