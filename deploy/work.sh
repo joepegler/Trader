@@ -10,9 +10,7 @@ RESTART_ARGS=
 # Uncomment and modify the following if you installed Passenger from tarball
 #export PATH=/path-to-passenger/bin:$PATH
 
-
 ### Automation steps ###
-
 set -x
 
 # Add ssh key
