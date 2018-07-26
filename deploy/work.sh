@@ -15,9 +15,10 @@ RESTART_ARGS=
 
 set -x
 
+# Add ssh key
+ssh-add ~/.ssh/id_rsa
+
 # Pull latest code
-
-
 if [[ -e $APP_DIR ]]; then
   cd $APP_DIR
   git checkout master
