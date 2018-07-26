@@ -4,18 +4,18 @@ module.exports = (function(){
 
     const Promise = require('promise');
     const _ = require('lodash');
-    const { Client } = require('pg');
-    let client;
+    const mysql = require('promise-mysql');
+    let connection;
 
     function _saveOrder(amount, pair, positionId, side){
         const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
         const values = [side, amount.toString(), 'NOW()', pair, 'false', positionId];
-        return client.query(text, values);
+        return connection.query(text, values);
     }
 
     async function _savePositionAndOrder(installments, size, pair, side){
-        let savedPosition = await _savePosition(installments, size, pair, side);
-        let positionId = savedPosition.rows[0].id;
+        let savedPositions = await _savePosition(installments, size, pair, side);
+        let positionId = savedPositions[0].id;
         let amount = parseFloat(size);
         return await _saveOrder(amount, pair, positionId, side);
     }
@@ -23,14 +23,14 @@ module.exports = (function(){
     function _savePosition(installments, size, pair, side){
         const text = 'INSERT INTO positions(installments, size, pair, ts, done, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING id';
         const values = [installments, size, pair, 'NOW()', 'false', side];
-        return client.query(text, values);
+        return connection.query(text, values);
     }
 
     function _getIncompleteOrders(pair){
         return new Promise((resolve, reject) => {
             const text = 'SELECT * FROM orders WHERE done = FALSE';
-            client.query(text).then(res => {
-                let orders = _.uniqBy(res.rows.reverse(), 'pair');
+            connection.query(text).then(rows => {
+                let orders = _.uniqBy(rows.reverse(), 'pair');
                 if (pair){
                     orders = orders.filter(order => { return order.pair === pair });
                 }
@@ -42,15 +42,15 @@ module.exports = (function(){
     function _getOrdersByPositionId(positionId){
         return new Promise((resolve, reject) => {
             const text = 'SELECT * FROM orders WHERE position_id = ' + positionId;
-            client.query(text).then(res => { resolve(res.rows) }).catch(reject);
+            connection.query(text).then(rows => { resolve(rows) }).catch(reject);
         });
     }
 
     function _getOpenPositions(pair){
         return new Promise((resolve, reject) => {
             const text = 'SELECT * FROM positions WHERE done = FALSE';
-            client.query(text).then(res => {
-                let openPositions = _.uniqBy(res.rows.reverse(), 'pair');
+            connection.query(text).then(rows => {
+                let openPositions = _.uniqBy(rows.reverse(), 'pair');
                 if (pair){
                     openPositions.filter(position => { return position.pair === pair });
                 }
@@ -62,14 +62,14 @@ module.exports = (function(){
     function _markOrderDone(orderId){
         return new Promise((resolve, reject) => {
             const text = 'UPDATE orders SET done = TRUE WHERE ID = $1';
-            client.query(text, [orderId]).then(dbResponse => resolve(orderId)).catch(reject);
+            connection.query(text, [orderId]).then(dbResponse => resolve(orderId)).catch(reject);
         });
     }
 
     function _markPositionDone(positionId, profit){
         return new Promise((resolve, reject) => {
             const text = 'UPDATE positions SET done = TRUE, profit = $1 WHERE ID = $2';
-            client.query(text, [profit, positionId]).then(dbResponse => resolve(positionId)).catch(reject);
+            connection.query(text, [profit, positionId]).then(dbResponse => resolve(positionId)).catch(reject);
         });
     }
 
@@ -77,17 +77,18 @@ module.exports = (function(){
         return new Promise((resolve, reject) => {
             const text = 'INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
             const values = Object.values(trade);
-            client.query(text, values).then(() => {
-                _markOrderDone(trade['order_id']).then(() => resolve(trade)).catch(reject);
+            connection.query(text, values).then(() => {
+                _markOrderDone(trade['order_id']).then(rows => resolve(trade)).catch(reject);
             });
         });
     }
 
     function _init(dbConfig){
-        return new Promise((resolve) => {
-            client = new Client(dbConfig);
-            client.connect();
-            resolve('Connected to db');
+        return new Promise((resolve, reject) => {
+            connection = mysql.createConnection(dbConfig).then(function(conn){
+                connection = conn;
+                resolve('Connected to db');
+            });
         })
     }
 
