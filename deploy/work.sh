@@ -27,6 +27,9 @@ else
   cd $APP_DIR
 fi
 
+# Update the database
+mysql -u ubuntu -pr32kYj8MwjzHnWhrLACH lootlabs < db.sql
+
 # Stop program
 pm2 stop trader
 
