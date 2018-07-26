@@ -8,9 +8,14 @@ module.exports = (function(){
     let connection;
 
     function _saveOrder(amount, pair, positionId, side){
-        const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
-        const values = [side, amount.toString(), 'NOW()', pair, 'false', positionId];
-        return connection.query(text, values);
+        return new Promise((resolve, reject) => {
+            const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6)';
+            const values = [side, amount.toString(), 'NOW()', pair, 'false', positionId];
+            connection.query(text, values).then(() => {
+                let resultQuery = `SELECT * FROM orders WHERE id = LAST_INSERT_ID()`;
+                return connection.query(resultQuery);
+            }).catch(reject);
+        });
     }
 
     async function _savePositionAndOrder(installments, size, pair, side){
@@ -21,9 +26,14 @@ module.exports = (function(){
     }
 
     function _savePosition(installments, size, pair, side){
-        const text = 'INSERT INTO positions(installments, size, pair, ts, done, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING id';
-        const values = [installments, size, pair, 'NOW()', 'false', side];
-        return connection.query(text, values);
+        return new Promise((resolve, reject) => {
+            const text = 'INSERT INTO positions(installments, size, pair, ts, done, side) VALUES($1, $2, $3, $4, $5, $6)';
+            const values = [installments, size, pair, 'NOW()', 'false', side];
+            connection.query(text, values).then(() => {
+                let resultQuery = `SELECT LAST_INSERT_ID()`;
+                return connection.query(resultQuery);
+            }).catch(reject);
+        })
     }
 
     function _getIncompleteOrders(pair){
@@ -75,7 +85,7 @@ module.exports = (function(){
 
     function _saveTrade(trade){
         return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES($1, $2, $3, $4, $5, $6) RETURNING *';
+            const text = 'INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES($1, $2, $3, $4, $5, $6)';
             const values = Object.values(trade);
             connection.query(text, values).then(() => {
                 _markOrderDone(trade['order_id']).then(rows => resolve(trade)).catch(reject);
