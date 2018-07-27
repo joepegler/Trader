@@ -9,10 +9,10 @@ module.exports = (function(){
 
     function _saveOrder(amount, pair, positionId, side){
         return new Promise((resolve, reject) => {
-            const text = `INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES(${side}, ${amount.toString()}, NOW(), '${pair}', FALSE, ${positionId})`;
+            const text = `INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES('${side}', ${amount.toString()}, NULL, '${pair}', FALSE, ${positionId})`;
             connection.query(text).then(() => {
                 let resultQuery = `SELECT * FROM orders WHERE id = LAST_INSERT_ID()`;
-                return connection.query(resultQuery);
+                connection.query(resultQuery).then(resolve).catch(reject);
             }).catch(reject);
         });
     }
@@ -26,10 +26,10 @@ module.exports = (function(){
 
     function _savePosition(installments, size, pair, side){
         return new Promise((resolve, reject) => {
-            const text = `INSERT INTO positions(installments, size, pair, ts, done, side) VALUES(${installments}, ${size}, '${pair}', NOW(), FALSE, '${side}')`;
+            const text = `INSERT INTO positions(installments, size, pair, ts, done, side) VALUES(${installments}, ${size}, '${pair}', NULL, FALSE, '${side}')`;
             connection.query(text).then(() => {
-                let resultQuery = `SELECT LAST_INSERT_ID()`;
-                return connection.query(resultQuery);
+                let resultQuery = `SELECT LAST_INSERT_ID() as id`;
+                connection.query(resultQuery).then(resolve).catch(reject);
             }).catch(reject);
         })
     }
@@ -50,7 +50,7 @@ module.exports = (function(){
     function _getOrdersByPositionId(positionId){
         return new Promise((resolve, reject) => {
             const text = `SELECT * FROM orders WHERE position_id = ${positionId}`;
-            connection.query(text).then(rows => { resolve(rows) }).catch(reject);
+            connection.query(text).then(resolve).catch(reject);
         });
     }
 
@@ -84,7 +84,7 @@ module.exports = (function(){
     function _saveTrade(trade){
         return new Promise((resolve, reject) => {
             const values = Object.values(trade);
-            const text = `INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES(${values[0]}, ${values[1]}, '${values[2]}', ${values[3]}, ${values[4]}, '${values[5]}')`;
+            const text = `INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES(${values[0]}, ${values[1]}, '${values[2]}', NULL, ${values[4]}, '${values[5]}')`;
             connection.query(text, values).then(() => {
                 _markOrderDone(trade['order_id']).then(rows => resolve(trade)).catch(reject);
             }).catch(reject);
