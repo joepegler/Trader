@@ -9,11 +9,10 @@ module.exports = (function(){
 
     function _saveOrder(amount, pair, positionId, side){
         return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES($1, $2, $3, $4, $5, $6)';
-            const values = [side, amount.toString(), 'NOW()', pair, 'false', positionId];
-            connection.query(text, values).then(() => {
+            const text = `INSERT INTO orders(side, amount, ts, pair, done, position_id) VALUES('${side}', ${amount.toString()}, NULL, '${pair}', FALSE, ${positionId})`;
+            connection.query(text).then(() => {
                 let resultQuery = `SELECT * FROM orders WHERE id = LAST_INSERT_ID()`;
-                return connection.query(resultQuery);
+                connection.query(resultQuery).then(resolve).catch(reject);
             }).catch(reject);
         });
     }
@@ -27,18 +26,17 @@ module.exports = (function(){
 
     function _savePosition(installments, size, pair, side){
         return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO positions(installments, size, pair, ts, done, side) VALUES($1, $2, $3, $4, $5, $6)';
-            const values = [installments, size, pair, 'NOW()', 'false', side];
-            connection.query(text, values).then(() => {
-                let resultQuery = `SELECT LAST_INSERT_ID()`;
-                return connection.query(resultQuery);
+            const text = `INSERT INTO positions(installments, size, pair, ts, done, side) VALUES(${installments}, ${size}, '${pair}', NULL, FALSE, '${side}')`;
+            connection.query(text).then(() => {
+                let resultQuery = `SELECT LAST_INSERT_ID() as id`;
+                connection.query(resultQuery).then(resolve).catch(reject);
             }).catch(reject);
         })
     }
 
     function _getIncompleteOrders(pair){
         return new Promise((resolve, reject) => {
-            const text = 'SELECT * FROM orders WHERE done = FALSE';
+            const text = 'SELECT * FROM orders WHERE done = 0';
             connection.query(text).then(rows => {
                 let orders = _.uniqBy(rows.reverse(), 'pair');
                 if (pair){
@@ -51,14 +49,14 @@ module.exports = (function(){
 
     function _getOrdersByPositionId(positionId){
         return new Promise((resolve, reject) => {
-            const text = 'SELECT * FROM orders WHERE position_id = ' + positionId;
-            connection.query(text).then(rows => { resolve(rows) }).catch(reject);
+            const text = `SELECT * FROM orders WHERE position_id = ${positionId}`;
+            connection.query(text).then(resolve).catch(reject);
         });
     }
 
     function _getOpenPositions(pair){
         return new Promise((resolve, reject) => {
-            const text = 'SELECT * FROM positions WHERE done = FALSE';
+            const text = 'SELECT * FROM positions WHERE done = 0';
             connection.query(text).then(rows => {
                 let openPositions = _.uniqBy(rows.reverse(), 'pair');
                 if (pair){
@@ -71,25 +69,25 @@ module.exports = (function(){
 
     function _markOrderDone(orderId){
         return new Promise((resolve, reject) => {
-            const text = 'UPDATE orders SET done = TRUE WHERE ID = $1';
-            connection.query(text, [orderId]).then(dbResponse => resolve(orderId)).catch(reject);
+            const text = `UPDATE orders SET done = TRUE WHERE ID = ${orderId}`;
+            connection.query(text).then(dbResponse => resolve(orderId)).catch(reject);
         });
     }
 
     function _markPositionDone(positionId, profit){
         return new Promise((resolve, reject) => {
-            const text = 'UPDATE positions SET done = TRUE, profit = $1 WHERE ID = $2';
-            connection.query(text, [profit, positionId]).then(dbResponse => resolve(positionId)).catch(reject);
+            const text = `UPDATE positions SET done = TRUE, profit = ${profit} WHERE ID = ${positionId}`;
+            connection.query(text).then(dbResponse => resolve(positionId)).catch(reject);
         });
     }
 
     function _saveTrade(trade){
         return new Promise((resolve, reject) => {
-            const text = 'INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES($1, $2, $3, $4, $5, $6)';
             const values = Object.values(trade);
+            const text = `INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES(${values[0]}, ${values[1]}, '${values[2]}', NULL, ${values[4]}, '${values[5]}')`;
             connection.query(text, values).then(() => {
                 _markOrderDone(trade['order_id']).then(rows => resolve(trade)).catch(reject);
-            });
+            }).catch(reject);
         });
     }
 
@@ -98,7 +96,7 @@ module.exports = (function(){
             connection = mysql.createConnection(dbConfig).then(function(conn){
                 connection = conn;
                 resolve('Connected to db');
-            });
+            }).catch(reject);
         })
     }
 

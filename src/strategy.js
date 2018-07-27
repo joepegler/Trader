@@ -56,6 +56,9 @@ module.exports = (function() {
             // Portion from balance
             let size = Math.round((balance / strategyOptions.installments) * 100) / 100;
 
+            // Set size to minimum amount while testing
+            if(process.argv[2] === 'dev') size = '0.002';
+
             // Bot is idle when there are no exchange orders, no
             let idle = !exchangeOrders.length && !exchangePositions.length && !databaseOrders.length;
 

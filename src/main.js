@@ -44,13 +44,14 @@ module.exports = (function() {
                 .then(initApi)
                 .catch(console.error)
         }
-        else if(process.argv[2] === 'dev') {
+        else if(commandLineArg === 'dev') {
             initIo()
                 .then()
                 .then(initLogger)
+                .then(initDb)
                 .then(initExchange)
-                .then(initToolkit)
-                .then(initTerminal)
+                .then(initSignaller)
+                .then(initStrategy)
                 .catch(console.error)
         }
         else if(commandLineArg === 'apitest') {
@@ -126,6 +127,7 @@ module.exports = (function() {
             let dbOpts = config.db;
             if (dbOpts){
                 features.db = require('./db');
+                if (process.argv[2] === 'dev') dbOpts.user = 'joe';
                 features.db.init(dbOpts).then(resolve).catch(reject);
             }
             else {
@@ -153,6 +155,7 @@ module.exports = (function() {
     function initSignaller(){
         console.info('initSignaller');
         let stratOpts = config.strategy;
+        if (process.argv[2] === 'dev') stratOpts.timeframe = { duration: '1m', ms: 1000 * 60 };
         return new Promise((resolve, reject) => {
             features.signaller = require('./signaller');
             features.signaller.init(features.exchange, features.logger, stratOpts).then(resolve).catch(reject);
@@ -162,6 +165,7 @@ module.exports = (function() {
     function initStrategy(){
         console.info('initStrategy');
         let stratOpts = config.strategy;
+        if (process.argv[2] === 'dev') stratOpts.timeframe = { duration: '1m', ms: 1000 * 60 };
         return new Promise((resolve, reject) => {
             features.strategy = require('./strategy');
             features.strategy.init(features.exchange, features.logger, stratOpts, features.signaller, features.db).then(resolve).catch(reject);
