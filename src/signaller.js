@@ -115,11 +115,8 @@ module.exports = (function() {
                 let addToLong = long && EMABullAddon && RSIBullAddon;
                 let addToShort = short && EMABearAddon && RSIBearAddon;
 
-                logger.log('[RSI] ' + rsi + '\n\n' + '[EMA 8] ' + ema8 + '\n' + '[EMA 13] ' + ema13 + '\n' + '[EMA 21] ' + ema21 + '\n' + '[EMA 34] ' + ema34 + '\n' + '[EMA 55] ' + ema55, null, true);
+                return { indicators : { rsi, ema8, ema13, ema21, ema34, ema55 }, long, short, closeLong, closeShort, addToLong, addToShort };
 
-                let signal = { long, short, closeLong, closeShort, addToLong, addToShort };
-
-                return signal;
             });
         });
     }

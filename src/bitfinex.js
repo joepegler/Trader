@@ -128,20 +128,28 @@ module.exports = (function(){
     function _getBalance(symbol){
         logger.log('getBalance');
         return new Promise((resolve, reject) => {
+            _getCurrentPrice(symbol).then(price => {
+                rest.calcAvailableBalance('t' + symbol, 1, price, 'MARGIN', (err, balance) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(balance[0]);
+                    }
+                });
+            })
+        })
+    }
+
+    function _getCurrentPrice(symbol){
+        logger.log('getCurrentPrice');
+        return new Promise((resolve, reject) => {
             rest.ticker('t' + symbol, (err, res) => {
                 if (err) {
                     reject(err);
                 }
                 else {
-                    let price = ((res[0] + res[2]) / 2);
-                    rest.calcAvailableBalance('t' + symbol, 1, price, 'MARGIN', (err, balance) => {
-                        if (err) {
-                            reject(err);
-                        }
-                        else {
-                            resolve(balance[0]);
-                        }
-                    });
+                    resolve(((res[0] + res[2]) / 2));
                 }
             });
         })
@@ -211,6 +219,7 @@ module.exports = (function(){
         getCandles: _getCandles,
         getBalance: _getBalance,
         placeTradesWithDbOrders: _placeTradesWithDbOrders,
+        getCurrentPrice: _getCurrentPrice,
         init: _init
     }
 

@@ -32,6 +32,9 @@ module.exports = (function() {
             // Exchange state
             let exchangeState = await exchange.getState(pair);
 
+            // CurrentPrice
+            let currentPrice = await exchange.getCurrentPrice(pair);
+
             // Exchange orders
             let exchangeOrders = exchangeState.orders;
 
@@ -67,8 +70,7 @@ module.exports = (function() {
                 (exchangePositions && exchangePositions.length === 1) &&
                 (exchangePosition && databasePosition && exchangePosition.pair === databasePosition.pair);
 
-            // Log to telegram
-            message = `[${ticker}] \n\n` + JSON.stringify(signal, null, 2);
+            message = `[${ticker}]\n\n` + JSON.stringify(signal, null, 2);
             logger.log(message, null, true);
 
             // Idle
@@ -157,6 +159,11 @@ module.exports = (function() {
 
                         // Reset the ticker
                         ticker = 0;
+                    }
+                    else {
+                        // Log to telegram
+                        message = `\n\n` + (exchangePosition.side === 'buy' ? 'Long' : 'Short' ) + ` ${exchangePosition.amount} ${exchangePosition.pair} for a ${exchangePosition.profit > 0 ? 'profit' : 'loss'} of ${ exchangePosition.profit }. Current price is ${ currentPrice }`;
+                        logger.log(message, null, true);
                     }
                 }
                 else {
