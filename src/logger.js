@@ -26,9 +26,9 @@ module.exports = (function() {
             }
             textFile && fs.appendFileSync('./' + textFile + '.txt', '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + ']' + msg);
             msg = msg.replace('\n', '');
-            important && telegram && telegram.sendMessage(msg);
             console.log(msg);
             io && io.emit('message', msg);
+            important && telegram && telegram.sendMessage(msg);
             if (messageTwo) logger.log(messageTwo, null, important);
         },
         error: (errorOne, errorTwo) => {
@@ -46,9 +46,9 @@ module.exports = (function() {
             }
             textFile && fs.appendFileSync('./' + textFile + '.txt', '\n[' + moment(new Date()).format('DD-MM-YY HH:mm:ss') + '] ' + msg);
             msg = msg.replace('\n', '');
-            telegram && telegram.sendMessage(msg);
             console.error(msg);
             io && io.emit('message', msg);
+            telegram && telegram.sendMessage(msg);
             if (errorTwo) logger.err(errorTwo);
         },
     };

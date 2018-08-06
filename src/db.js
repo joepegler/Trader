@@ -84,7 +84,7 @@ module.exports = (function(){
     function _saveTrade(trade){
         return new Promise((resolve, reject) => {
             const values = Object.values(trade);
-            const text = `INSERT INTO trades(id, order_id, pair, ts, amount, side) VALUES(${values[0]}, ${values[1]}, '${values[2]}', NULL, ${values[4]}, '${values[5]}')`;
+            const text = `INSERT INTO trades(id, order_id, pair, amount, side) VALUES(${values[0]}, ${values[1]}, '${values[2]}', ${values[4]}, '${values[5]}')`;
             connection.query(text, values).then(() => {
                 _markOrderDone(trade['order_id']).then(rows => resolve(trade)).catch(reject);
             }).catch(reject);

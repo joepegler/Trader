@@ -158,6 +158,7 @@ module.exports = (function(){
     function _order(pair, amount, orderId){
         logger.log('order');
         return new Promise((resolve, reject) => {
+            logger.log('_order: ' + [pair, amount, orderId], null, true);
             const o = new Order({
                 cid: Date.now(),
                 symbol: 't' + pair,
@@ -165,7 +166,8 @@ module.exports = (function(){
                 type: Order.type.MARKET
             }, ws);
             o.registerListeners();
-            o.on('close', () => {
+            o.on('close', orderFromExchange => {
+                logger.log('order done: ' + '[' + moment().format('HH:mm:ss') + ']' + orderId + '\n' + JSON.stringify(orderFromExchange), null, true);
                 let order = o.serialize();
                 let trade = {
                     id: order[0],

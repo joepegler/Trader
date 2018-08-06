@@ -162,7 +162,7 @@ module.exports = (function() {
                     }
                     else {
                         // Log to telegram
-                        message = `\n\n` + (exchangePosition.side === 'buy' ? 'Long' : 'Short' ) + ` ${exchangePosition.amount} ${exchangePosition.pair} for a ${exchangePosition.profit > 0 ? 'profit' : 'loss'} of ${ exchangePosition.profit }. The positions base price is ${ exchangePosition.base }, the current price is ${ currentPrice }`;
+                        message = `\n\n` + ( exchangePosition.side === 'buy' ? 'Long' : 'Short' ) + ` ${exchangePosition.amount} ${exchangePosition.pair} at a current ${exchangePosition.profit > 0 ? 'profit' : 'loss'} of $${ Math.round(exchangePosition.profit) }. The position base price is $${ Math.round(exchangePosition.base) }, the current price of ${ pair } is $${ Math.round(currentPrice) }`;
                         logger.log(message, null, true);
                     }
                 }
