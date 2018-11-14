@@ -1,4 +1,5 @@
-#Trader
+# Trader
+Automatic trader that trades the custom built algorithm documented [here](https://uk.tradingview.com/script/QoNKoXwW-Simple-profitable-trading-strategy/). 
 
 ## Local Development configuration
 - This project requires [node](https://nodejs.org/en/) to run. It was developed using version 8.9.4. 
